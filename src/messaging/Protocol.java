@@ -1,0 +1,8 @@
+package messaging;
+
+public interface Protocol {
+    int ENTER_OVERLAY = 0;
+    int ENTRANCE_SUCCESSFUL = 1;
+    int COLLISION = 2;
+    int EXIT_OVERLAY = 99;
+}
