@@ -22,6 +22,9 @@ public class DiscoveryNode implements Node {
     private TCPSender sender = new TCPSender();
 
     public DiscoveryNode() {
+    }
+
+    private void startup() {
         TCPServerThread serverThread = new TCPServerThread(this, discoveryPort);
         serverThread.start();
     }
@@ -69,6 +72,7 @@ public class DiscoveryNode implements Node {
             addNewNodeToOverlay(justRegisteredNode);
         } else if (event instanceof NodeLeaving) {
             handleNodeLeaving(((NodeLeaving) event).getSixteenBitID());
+            System.out.println("node is leaving.");
         }
     }
 
@@ -99,5 +103,6 @@ public class DiscoveryNode implements Node {
         discoveryPort = Integer.parseInt(args[1]);
 
         DiscoveryNode discoveryNode = new DiscoveryNode();
+        discoveryNode.startup();
     }
 }

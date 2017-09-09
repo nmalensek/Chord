@@ -1,11 +1,9 @@
 package test;
 
 import data.ConvertHex;
-import hash.ComputeHash;
 
 public class IdentifierInput {
 
-    private ComputeHash computeHash = new ComputeHash();
     private static String identifier;
     private static String nanoIdentifier;
     private ConvertHex convertHex = new ConvertHex();
@@ -13,8 +11,8 @@ public class IdentifierInput {
     private void printIDHash() {
         String hexString = convertHex.convertBytesToHex(identifier.getBytes());
         String nanoHex = convertHex.convertBytesToHex(nanoIdentifier.getBytes());
-        System.out.println(hexString);
-        System.out.println(nanoHex);
+        System.out.println("identifier converted to hex: " + hexString);
+        System.out.println("nanotime converted to hex: " + nanoHex);
     }
 
     private void retryIdentifier() {
@@ -36,8 +34,8 @@ public class IdentifierInput {
             identifier = String.valueOf(System.currentTimeMillis());
             nanoIdentifier = String.valueOf(System.nanoTime());
         }
-        System.out.println(identifier);
-        System.out.println(nanoIdentifier);
+        System.out.println("argument or milliseconds: " + identifier);
+        System.out.println("nanotime: " + nanoIdentifier);
         IdentifierInput input = new IdentifierInput();
         input.printIDHash();
         input.retryIdentifier();

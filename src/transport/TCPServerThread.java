@@ -15,7 +15,7 @@ public class TCPServerThread extends Thread {
     private Node node;
     private int portNum;
     private ServerSocket serverSocket;
-    private ExecutorService pool = Executors.newFixedThreadPool(20);
+    private ExecutorService pool = Executors.newFixedThreadPool(10);
 
     public TCPServerThread(Node node, int portNum) {
         this.node = node;
@@ -32,7 +32,7 @@ public class TCPServerThread extends Thread {
 
             while(true) {
 //                pool.execute(new TCPReceiverThread(serverSocket.accept(), node));
-//                new TCPReceiverThread(serverSocket.accept(), node).start();
+                new TCPReceiverThread(serverSocket.accept(), node).start();
                 }
         } catch (IOException e) {
             e.printStackTrace();

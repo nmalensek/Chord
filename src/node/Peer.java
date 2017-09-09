@@ -1,12 +1,13 @@
 package node;
 
 import data.ConvertHex;
-import hash.ComputeHash;
 import messaging.Collision;
 import messaging.Event;
 import messaging.NodeInformation;
+import messaging.NodeLeaving;
 import transport.TCPSender;
 import transport.TCPServerThread;
+import util.ShutdownHook;
 
 import java.io.IOException;
 import java.net.Inet4Address;
@@ -22,11 +23,10 @@ public class Peer implements Node {
     private static String discoveryNodeHost;
     private static int discoveryNodePort;
     private String convertedIdentifier;
-    private ComputeHash computeHash = new ComputeHash();
     private ConvertHex convertHex = new ConvertHex();
     private TCPSender sender = new TCPSender();
-    private String predecessor;
-    private HashMap<Integer, String> fingerTable = new HashMap<>();
+    private NodeRecord predecessor;
+    private HashMap<Integer, NodeRecord> fingerTable = new HashMap<>();
 
     public Peer() throws IOException {
         convertedIdentifier = convertHex.convertBytesToHex(initialIdentifier.getBytes());
@@ -51,16 +51,23 @@ public class Peer implements Node {
 
     }
 
+    private void addShutDownHook() {
+        final Thread mainThread = Thread.currentThread();
+        Runtime.getRuntime().addShutdownHook(new ShutdownHook(sender, fingerTable.get(1),
+                predecessor, convertedIdentifier, discoveryNodeHost, discoveryNodePort));
+    }
+
     @Override
     public void onEvent(Event event, Socket destinationSocket) throws IOException {
         if (event instanceof NodeInformation) {
             //figure out where to go!
+            addShutDownHook();
         } else if (event instanceof Collision) {
             //another node already has that id, get a new id and retry
             convertedIdentifier = String.valueOf(System.currentTimeMillis());
             connectToNetwork();
-//        } else if (event instanceof ) {
-//
+        } else if (event instanceof NodeLeaving) {
+            //update finger table
 //        } else if (event instanceof ) {
 //
         }

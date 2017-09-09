@@ -32,7 +32,7 @@ public class TCPReceiverThread extends Thread implements Protocol {
      **/
     public void run() {
         int dataLength;
-        while (communicationSocket != null) {
+        while (!communicationSocket.isClosed()) {
             try {
                 dataLength = dataInputStream.readInt();
 
@@ -80,10 +80,13 @@ public class TCPReceiverThread extends Thread implements Protocol {
                 Event<Collision> collisionEvent =
                         eventFactory.collisionEvent(marshalledBytes);
                 node.onEvent(collisionEvent, communicationSocket);
+                break;
             case EXIT_OVERLAY:
                 Event<NodeLeaving> nodeLeavingEvent =
                         eventFactory.nodeLeavingEvent(marshalledBytes);
                 node.onEvent(nodeLeavingEvent, communicationSocket);
+                communicationSocket.close();
+                break;
             default:
                 System.out.println("Something went horribly wrong, please restart.");
         }
