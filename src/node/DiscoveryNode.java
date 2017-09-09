@@ -1,9 +1,6 @@
 package node;
 
-import messaging.Collision;
-import messaging.Event;
-import messaging.NodeInformation;
-import messaging.NodeLeaving;
+import messaging.*;
 import transport.TCPSender;
 import transport.TCPServerThread;
 
@@ -46,7 +43,7 @@ public class DiscoveryNode implements Node {
                 registeredPeers.put(node.getIdentifier(), node);
                 randomNodes.add(node);
 
-                NodeInformation messageWithRandomNode = prepareAcceptanceMessage(randomNode);
+                NodeInformation messageWithRandomNode = prepareRandomNodeInfoMessage(randomNode);
                 sender.sendToSpecificSocket(newNodeSocket, messageWithRandomNode.getBytes());
             } else {
                 Collision collision = new Collision();
@@ -57,12 +54,23 @@ public class DiscoveryNode implements Node {
         }
     }
 
-    private NodeInformation prepareAcceptanceMessage(NodeRecord randomNode) {
+    private NodeInformation prepareRandomNodeInfoMessage(NodeRecord randomNode) {
         NodeInformation randomNodeInfo = new NodeInformation();
         randomNodeInfo.setSixteenBitID(randomNode.getIdentifier());
         randomNodeInfo.setHostPort(randomNode.getHost() + ":" + randomNode.getPort());
         randomNodeInfo.setNickname(randomNode.getNickname());
         return randomNodeInfo;
+    }
+
+    private void checkForFileCollision(String fileID, Socket storeDataSocket) throws IOException {
+        if (registeredPeers.get(fileID) == null) {
+            NodeRecord randomNode = chooseRandomNode();
+            NodeInformation nodeToContact = prepareRandomNodeInfoMessage(randomNode);
+            sender.sendToSpecificSocket(storeDataSocket, nodeToContact.getBytes());
+        } else {
+            Collision collision = new Collision();
+            sender.sendToSpecificSocket(storeDataSocket, collision.getBytes());
+        }
     }
 
     @Override
@@ -73,7 +81,15 @@ public class DiscoveryNode implements Node {
         } else if (event instanceof NodeLeaving) {
             handleNodeLeaving(((NodeLeaving) event).getSixteenBitID());
             System.out.println("node is leaving.");
+        } else if (event instanceof StoreDataInquiry) {
+            String id = ((StoreDataInquiry) event).getSixteenBitID();
+            checkForFileCollision(id, destinationSocket);
         }
+    }
+
+    @Override
+    public void processText(String text) throws IOException {
+
     }
 
     private synchronized void handleNodeLeaving(String nodeID) {

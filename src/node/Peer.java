@@ -67,10 +67,20 @@ public class Peer implements Node {
             convertedIdentifier = String.valueOf(System.currentTimeMillis());
             connectToNetwork();
         } else if (event instanceof NodeLeaving) {
+            if (fingerTable.get(1).getIdentifier().equals(((NodeLeaving) event).getSixteenBitID())) {
+                //successor left
+                fingerTable.remove(1);
+            } else {
+                //predecessor left
+                predecessor = null;
+            }
             //update finger table
-//        } else if (event instanceof ) {
-//
         }
+    }
+
+    @Override
+    public void processText(String text) {
+
     }
 
     public static void main(String[] args) throws UnknownHostException {

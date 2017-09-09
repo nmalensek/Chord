@@ -1,9 +1,6 @@
 package messaging.eventfactory;
 
-import messaging.Collision;
-import messaging.Event;
-import messaging.NodeInformation;
-import messaging.NodeLeaving;
+import messaging.*;
 
 import java.io.IOException;
 
@@ -47,5 +44,19 @@ public final class EventFactory {
         NodeLeaving nodeLeaving = new NodeLeaving();
         nodeLeaving.readMessage(marshalledBytes);
         return nodeLeaving;
+    }
+
+    public static Event<StoreDataInquiry> storeDataInquiryEvent(
+            byte[] marshalledBytes) throws IOException {
+        StoreDataInquiry inquiry = new StoreDataInquiry();
+        inquiry.readMessage(marshalledBytes);
+        return  inquiry;
+    }
+
+    public static Event<Lookup> lookupEvent(
+            byte[] marshalledBytes) throws IOException {
+        Lookup lookup = new Lookup();
+        lookup.readMessage(marshalledBytes);
+        return lookup;
     }
 }
