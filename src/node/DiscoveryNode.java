@@ -76,21 +76,17 @@ public class DiscoveryNode implements Node {
             addNewNodeToOverlay(justRegisteredNode);
         } else if (event instanceof NodeLeaving) {
             handleNodeLeaving(((NodeLeaving) event).getSixteenBitID());
-            System.out.println("node is leaving.");
         } else if (event instanceof StoreDataInquiry) {
             int id = ((StoreDataInquiry) event).getSixteenBitID();
             respondToInquiry(id, destinationSocket);
         }
     }
 
-    @Override
-    public void processText(String text) throws IOException {
-
-    }
-
     private synchronized void handleNodeLeaving(int nodeID) {
         NodeRecord removedNode = registeredPeers.remove(nodeID);
-        randomNodes.remove(removedNode);
+        randomNodes.remove(removedNode.getIdentifier());
+        System.out.println(removedNode.getNickname() +
+                " (ID: " + removedNode.getIdentifier() + ") has left the overlay.");
     }
 
     private NodeRecord constructNewNode(Event event) throws IOException {
@@ -108,6 +104,9 @@ public class DiscoveryNode implements Node {
         int randomNode = ThreadLocalRandom.current().nextInt(0, randomNodes.size());
         return registeredPeers.get(randomNodes.get(randomNode));
     }
+
+    @Override
+    public void processText(String text) throws IOException { }
 
     public static void main(String[] args) {
         discoveryHost = args[0];

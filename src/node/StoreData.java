@@ -5,6 +5,7 @@ import transport.TCPSender;
 import transport.TCPServerThread;
 import util.TextInputThread;
 
+import java.io.File;
 import java.io.IOException;
 import java.net.Inet4Address;
 import java.net.Socket;
@@ -21,6 +22,7 @@ public class StoreData implements Node {
     private Socket discoveryNodeSocket = new Socket(discoveryNodeHost, discoveryNodePort);
     private int fileID;
     private Path filePath;
+    private File file;
 
     public StoreData() throws IOException {
         thisNodeHost = Inet4Address.getLocalHost().getHostName();
@@ -55,10 +57,11 @@ public class StoreData implements Node {
 
     @Override
     public void processText(String text) throws IOException {
-        String command =  text.split("\\s")[0];
+        String command = text.split("\\s")[0];
         switch (command) {
             case "file":
                 filePath = Paths.get(text.split("\\s")[1]);
+                file = new File(text.split("\\s")[1]);
                 fileID = Integer.parseInt(text.split("\\s")[2]);
                 StoreDataInquiry inquiry = new StoreDataInquiry();
                 inquiry.setSixteenBitID(fileID);

@@ -10,6 +10,7 @@ import java.net.Inet4Address;
 import java.net.Socket;
 import java.net.UnknownHostException;
 import java.util.HashMap;
+import java.util.Scanner;
 
 public class Peer implements Node {
 
@@ -41,7 +42,9 @@ public class Peer implements Node {
     }
 
     private void constructFingerTable() {
+        for (int i = 1; i < 17; i++) { //16-bit ID space, so all nodes have 16 FT entries.
 
+        }
     }
 
     private void addShutDownHook() {
@@ -56,12 +59,13 @@ public class Peer implements Node {
             addShutDownHook();
         } else if (event instanceof Collision) {
             //another node already has that id, get a new id and retry
-            //TODO prompt user for new ID
+            System.out.println("This node's ID already exists in the overlay. Please enter a new one:");
+            promptForNewID();
             connectToNetwork();
         } else if (event instanceof NodeLeaving) {
             if (fingerTable.get(1).getIdentifier() == (((NodeLeaving) event).getSixteenBitID())) {
                 //successor left
-                fingerTable.remove(1);
+                fingerTable.remove(1); //TODO: re-make finger table instead of just remove
             } else {
                 //predecessor left
                 predecessor = null;
@@ -69,7 +73,13 @@ public class Peer implements Node {
             //update finger table
         } else if (event instanceof Lookup) {
             processLookup(((Lookup) event));
+        } else if (event instanceof FilePayload) {
+
         }
+    }
+
+    private void storeFile() {
+
     }
 
     private void processLookup(Lookup lookupEvent) throws IOException {
@@ -85,6 +95,16 @@ public class Peer implements Node {
 
         }
     }
+
+    private void promptForNewID() {
+        Scanner userInput = new Scanner(System.in);
+            try {
+                nodeIdentifier = Integer.parseInt(userInput.nextLine());
+            } catch (NumberFormatException n) {
+                System.out.println("Identifier must be an integer between 0 and 65535, please try again.");
+                promptForNewID();
+            }
+        }
 
     @Override
     public void processText(String text) {
