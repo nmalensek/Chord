@@ -8,7 +8,7 @@ import java.nio.file.Paths;
 public class FilePayload implements Protocol, Event {
     private int messageType = FILE;
     private int fileID;
-    private File payload;
+    private File fileToTransfer;
     private Path filepath;
     private byte[] fileByteArray;
 
@@ -18,14 +18,22 @@ public class FilePayload implements Protocol, Event {
     @Override
     public int getMessageType() { return messageType; }
 
-    public File getPayload() { return payload; }
-    public void setPayload(File payload) { this.payload = payload; }
+    public File getFileToTransfer() { return fileToTransfer; }
+    public void setFileToTransfer(File fileToTransfer) { this.fileToTransfer = fileToTransfer; }
 
     public Path getFilepath() { return filepath; }
     public void setFilepath(Path filepath) { this.filepath = filepath; }
 
     public int getFileID() { return fileID; }
     public void setFileID(int fileID) { this.fileID = fileID; }
+
+    public byte[] getFileByteArray() {
+        return fileByteArray;
+    }
+
+    public void setFileByteArray(byte[] fileByteArray) {
+        this.fileByteArray = fileByteArray;
+    }
 
     //marshalls bytes
     public byte[] getBytes() throws IOException {
@@ -37,7 +45,7 @@ public class FilePayload implements Protocol, Event {
         dataOutputStream.writeInt(messageType);
         dataOutputStream.writeInt(fileID);
 
-        byte[] fileBytes = Files.readAllBytes(payload.toPath());
+        byte[] fileBytes = Files.readAllBytes(fileToTransfer.toPath());
         int fileBytesLength = fileBytes.length;
         dataOutputStream.writeInt(fileBytesLength);
         dataOutputStream.write(fileBytes);
@@ -67,7 +75,7 @@ public class FilePayload implements Protocol, Event {
         fileByteArray = fileBytes;
 //        Files.write(filepath, fileBytes);
 //
-//        payload = filepath.toFile();
+//        fileToTransfer = filepath.toFile();
 
         byteArrayInputStream.close();
         dataInputStream.close();
@@ -77,7 +85,7 @@ public class FilePayload implements Protocol, Event {
         Path path = Paths.get(filepath);
         Files.write(path, bytes);
 
-//        payload = filepath.toFile();
+//        fileToTransfer = filepath.toFile();
     }
 
 }

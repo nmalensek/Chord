@@ -32,7 +32,7 @@ public class TCPReceiverThread extends Thread implements Protocol {
      **/
     public void run() {
         int dataLength;
-        while (!communicationSocket.isClosed()) {
+        while (communicationSocket != null) {
             try {
                 dataLength = dataInputStream.readInt();
 
@@ -42,7 +42,8 @@ public class TCPReceiverThread extends Thread implements Protocol {
                 determineMessageType(data);
 
             } catch (IOException ioe) {
-                ioe.printStackTrace();
+                System.out.println("failed");
+//                ioe.printStackTrace();
             } catch (ClassNotFoundException e) {
                 e.printStackTrace();
             }
@@ -101,6 +102,11 @@ public class TCPReceiverThread extends Thread implements Protocol {
                         eventFactory.nodeLeavingEvent(marshalledBytes);
                 node.onEvent(nodeLeavingEvent, communicationSocket);
                 communicationSocket.close();
+                break;
+            case FILE:
+                Event<FilePayload> filePayloadEvent =
+                        eventFactory.filePayloadEvent(marshalledBytes);
+                node.onEvent(filePayloadEvent, communicationSocket);
                 break;
             default:
                 System.out.println("Something went horribly wrong, please restart.");

@@ -66,4 +66,12 @@ public final class EventFactory {
         destinationNode.readMessage(marshalledBytes);
         return destinationNode;
     }
+
+    public static Event<FilePayload> filePayloadEvent(
+            byte[] marshalledBytes) throws IOException {
+        FilePayload filePayload = new FilePayload();
+        filePayload.readMessage(marshalledBytes);
+        return filePayload;
+    }
+
 }

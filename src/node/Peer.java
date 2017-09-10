@@ -74,7 +74,7 @@ public class Peer implements Node {
         } else if (event instanceof Lookup) {
             processLookup(((Lookup) event));
         } else if (event instanceof FilePayload) {
-
+            ((FilePayload) event).writeFile(((FilePayload) event).getFileByteArray(), "test.png");
         }
     }
 
