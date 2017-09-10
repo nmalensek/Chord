@@ -4,14 +4,14 @@ import java.io.*;
 
 public class StoreDataInquiry implements Protocol, Event{
     private int messageType = STORE_DATA_INQUIRY;
-    private String sixteenBitID;
+    private int sixteenBitID;
 
     public StoreDataInquiry getType() {
         return this;
     }
 
-    public String getSixteenBitID() { return sixteenBitID; }
-    public void setSixteenBitID(String sixteenBitID) { this.sixteenBitID = sixteenBitID; }
+    public int getSixteenBitID() { return sixteenBitID; }
+    public void setSixteenBitID(int sixteenBitID) { this.sixteenBitID = sixteenBitID; }
 
     @Override
     public int getMessageType() {
@@ -27,10 +27,7 @@ public class StoreDataInquiry implements Protocol, Event{
 
         dataOutputStream.writeInt(messageType);
 
-        byte[] identifierBytes = sixteenBitID.getBytes();
-        int identifierLength = identifierBytes.length;
-        dataOutputStream.writeInt(identifierLength);
-        dataOutputStream.write(identifierBytes);
+        dataOutputStream.writeInt(sixteenBitID);
 
         dataOutputStream.flush();
         marshalledBytes = byteArrayOutputStream.toByteArray();
@@ -49,11 +46,7 @@ public class StoreDataInquiry implements Protocol, Event{
 
         messageType = dataInputStream.readInt();
 
-        int identifierLength = dataInputStream.readInt();
-        byte[] identifierBytes = new byte[identifierLength];
-        dataInputStream.readFully(identifierBytes);
-
-        sixteenBitID = new String(identifierBytes);
+        sixteenBitID = dataInputStream.readInt();
 
         byteArrayInputStream.close();
         dataInputStream.close();

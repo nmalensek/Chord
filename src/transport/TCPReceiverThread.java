@@ -81,6 +81,21 @@ public class TCPReceiverThread extends Thread implements Protocol {
                         eventFactory.collisionEvent(marshalledBytes);
                 node.onEvent(collisionEvent, communicationSocket);
                 break;
+            case STORE_DATA_INQUIRY:
+                Event<StoreDataInquiry> storeDataInquiryEvent =
+                        eventFactory.storeDataInquiryEvent(marshalledBytes);
+                node.onEvent(storeDataInquiryEvent, communicationSocket);
+                break;
+            case LOOKUP:
+                Event<Lookup> lookupEvent =
+                        eventFactory.lookupEvent(marshalledBytes);
+                node.onEvent(lookupEvent, communicationSocket);
+                break;
+            case DESTINATION:
+                Event<DestinationNode> destinationNodeEvent =
+                        eventFactory.destinationNodeEvent(marshalledBytes);
+                node.onEvent(destinationNodeEvent, communicationSocket);
+                break;
             case EXIT_OVERLAY:
                 Event<NodeLeaving> nodeLeavingEvent =
                         eventFactory.nodeLeavingEvent(marshalledBytes);

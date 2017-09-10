@@ -1,10 +1,6 @@
 package node;
 
-import data.ConvertHex;
-import messaging.Collision;
-import messaging.Event;
-import messaging.NodeInformation;
-import messaging.StoreDataInquiry;
+import messaging.*;
 import transport.TCPSender;
 import transport.TCPServerThread;
 import util.TextInputThread;
@@ -22,8 +18,9 @@ public class StoreData implements Node {
     private static String thisNodeHost;
     private static int thisNodePort;
     private TCPSender sender = new TCPSender();
-    private ConvertHex convertHex = new ConvertHex();
     private Socket discoveryNodeSocket = new Socket(discoveryNodeHost, discoveryNodePort);
+    private int fileID;
+    private Path filePath;
 
     public StoreData() throws IOException {
         thisNodeHost = Inet4Address.getLocalHost().getHostName();
@@ -47,10 +44,12 @@ public class StoreData implements Node {
 
     @Override
     public void onEvent(Event event, Socket destinationSocket) throws IOException {
-        if (event instanceof Collision) {
-            System.out.println("File ID matches a node ID in the overlay. Please rename file and try again.");
-        } else if (event instanceof NodeInformation) {
-
+        if (event instanceof NodeInformation) {
+            Lookup lookup = new Lookup();
+            lookup.setPayloadID(fileID);
+            lookup.setRoutingPath(thisNodeHost + ":" + thisNodePort + ",");
+        } else if (event instanceof DestinationNode) {
+            //send image to there
         }
     }
 
@@ -59,9 +58,8 @@ public class StoreData implements Node {
         String command =  text.split("\\s")[0];
         switch (command) {
             case "file":
-                Path filePath = Paths.get(text.split("\\s")[1]);
-                String fileName = filePath.getFileName().toString();
-                String fileID = convertHex.convertBytesToHex(fileName.getBytes());
+                filePath = Paths.get(text.split("\\s")[1]);
+                fileID = Integer.parseInt(text.split("\\s")[2]);
                 StoreDataInquiry inquiry = new StoreDataInquiry();
                 inquiry.setSixteenBitID(fileID);
                 sender.sendToSpecificSocket(discoveryNodeSocket, inquiry.getBytes());

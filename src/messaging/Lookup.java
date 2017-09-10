@@ -4,9 +4,9 @@ import java.io.*;
 
 public class Lookup implements Protocol, Event {
     private int messageType = LOOKUP;
-    private String pathIDs;
-    private String payloadID;
+    private int payloadID;
     private int numHops;
+    private String routingPath;
 
     @Override
     public Lookup getType() { return this; }
@@ -14,14 +14,14 @@ public class Lookup implements Protocol, Event {
     @Override
     public int getMessageType() { return messageType; }
 
-    public String getPathIDs() { return pathIDs; }
-    public void setPathIDs(String pathIDs) { this.pathIDs = pathIDs; }
-
-    public String getPayloadID() { return payloadID; }
-    public void setPayloadID(String payloadID) { this.payloadID = payloadID; }
+    public int getPayloadID() { return payloadID; }
+    public void setPayloadID(int payloadID) { this.payloadID = payloadID; }
 
     public int getNumHops() { return numHops; }
     public void setNumHops(int numHops) { this.numHops = numHops; }
+
+    public String getRoutingPath() { return routingPath; }
+    public void setRoutingPath(String routingPath) { this.routingPath = routingPath; }
 
     //marshalls bytes
     public byte[] getBytes() throws IOException {
@@ -31,17 +31,13 @@ public class Lookup implements Protocol, Event {
                 new DataOutputStream(new BufferedOutputStream(byteArrayOutputStream));
 
         dataOutputStream.writeInt(messageType);
+        dataOutputStream.writeInt(payloadID);
         dataOutputStream.writeInt(numHops);
 
-        byte[] pathIDsBytes = pathIDs.getBytes();
-        int identifierLength = pathIDsBytes.length;
-        dataOutputStream.writeInt(identifierLength);
-        dataOutputStream.write(pathIDsBytes);
-
-        byte[] payloadBytes = payloadID.getBytes();
-        int payloadLength = payloadBytes.length;
-        dataOutputStream.writeInt(payloadLength);
-        dataOutputStream.write(payloadBytes);
+        byte[] routingPathBytes = routingPath.getBytes();
+        int routingPathLength = routingPathBytes.length;
+        dataOutputStream.writeInt(routingPathLength);
+        dataOutputStream.write(routingPathBytes);
 
         dataOutputStream.flush();
         marshalledBytes = byteArrayOutputStream.toByteArray();
@@ -59,19 +55,14 @@ public class Lookup implements Protocol, Event {
                 new DataInputStream(new BufferedInputStream(byteArrayInputStream));
 
         messageType = dataInputStream.readInt();
+        payloadID = dataInputStream.readInt();
         numHops = dataInputStream.readInt();
 
-        int pathIDLength = dataInputStream.readInt();
-        byte[] pathIDBytes = new byte[pathIDLength];
-        dataInputStream.readFully(pathIDBytes);
+        int routingPathLength = dataInputStream.readInt();
+        byte[] routingPathBytes = new byte[routingPathLength];
+        dataInputStream.readFully(routingPathBytes);
 
-        pathIDs = new String(pathIDBytes);
-
-        int payloadLength = dataInputStream.readInt();
-        byte[] payloadBytes = new byte[payloadLength];
-        dataInputStream.readFully(payloadBytes);
-
-        payloadID = new String(payloadBytes);
+        routingPath = new String(routingPathBytes);
 
         byteArrayInputStream.close();
         dataInputStream.close();

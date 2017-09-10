@@ -23,13 +23,18 @@ public class TestShutdown implements Node{
 
     }
 
+    @Override
+    public void processText(String text) throws IOException {
+
+    }
+
     private void addShutdownHook() {
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             try {
                 Socket testSocket = new Socket(host, 60851);
                 System.out.println("sending exit message...");
                 NodeLeaving leaving = new NodeLeaving();
-                leaving.setSixteenBitID("12345");
+                leaving.setSixteenBitID(12345);
                 sender.sendToSpecificSocket(testSocket, leaving.getBytes());
                 System.out.println("exiting...");
                 testSocket.close();

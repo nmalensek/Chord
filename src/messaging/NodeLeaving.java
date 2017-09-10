@@ -4,14 +4,14 @@ import java.io.*;
 
 public class NodeLeaving implements Protocol, Event {
     private int messageType = EXIT_OVERLAY;
-    private String sixteenBitID;
+    private int sixteenBitID;
 
     public NodeLeaving getType() {
         return this;
     }
 
-    public String getSixteenBitID() { return sixteenBitID; }
-    public void setSixteenBitID(String sixteenBitID) { this.sixteenBitID = sixteenBitID; }
+    public int getSixteenBitID() { return sixteenBitID; }
+    public void setSixteenBitID(int sixteenBitID) { this.sixteenBitID = sixteenBitID; }
 
     @Override
     public int getMessageType() {
@@ -26,11 +26,7 @@ public class NodeLeaving implements Protocol, Event {
                 new DataOutputStream(new BufferedOutputStream(byteArrayOutputStream));
 
         dataOutputStream.writeInt(messageType);
-
-        byte[] identifierBytes = sixteenBitID.getBytes();
-        int identifierLength = identifierBytes.length;
-        dataOutputStream.writeInt(identifierLength);
-        dataOutputStream.write(identifierBytes);
+        dataOutputStream.writeInt(sixteenBitID);
 
         dataOutputStream.flush();
         marshalledBytes = byteArrayOutputStream.toByteArray();
@@ -49,11 +45,7 @@ public class NodeLeaving implements Protocol, Event {
 
         messageType = dataInputStream.readInt();
 
-        int identifierLength = dataInputStream.readInt();
-        byte[] identifierBytes = new byte[identifierLength];
-        dataInputStream.readFully(identifierBytes);
-
-        sixteenBitID = new String(identifierBytes);
+        sixteenBitID = dataInputStream.readInt();
 
         byteArrayInputStream.close();
         dataInputStream.close();

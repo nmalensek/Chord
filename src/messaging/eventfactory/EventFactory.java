@@ -59,4 +59,11 @@ public final class EventFactory {
         lookup.readMessage(marshalledBytes);
         return lookup;
     }
+
+    public static Event<DestinationNode> destinationNodeEvent(
+            byte[] marshalledBytes) throws IOException {
+        DestinationNode destinationNode = new DestinationNode();
+        destinationNode.readMessage(marshalledBytes);
+        return destinationNode;
+    }
 }

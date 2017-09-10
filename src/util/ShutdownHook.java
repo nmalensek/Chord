@@ -12,12 +12,12 @@ public class ShutdownHook extends Thread {
     private TCPSender sender;
     private NodeRecord successor;
     private NodeRecord predecessor;
-    private String ownerNodeID;
+    private int ownerNodeID;
     private String discoveryNodeHost;
     private int discoveryNodePort;
 
     public ShutdownHook(TCPSender sender, NodeRecord successor, NodeRecord predecessor,
-                        String ownerNodeID, String discoveryNodeHost, int discoveryNodePort) {
+                        int ownerNodeID, String discoveryNodeHost, int discoveryNodePort) {
         this.sender = sender;
         this.successor = successor;
         this.predecessor = predecessor;

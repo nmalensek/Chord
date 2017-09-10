@@ -5,10 +5,10 @@ import java.io.IOException;
 public class NodeRecord {
     private String host;
     private int port;
-    private String identifier;
+    private int identifier;
     private String nickname;
 
-    public NodeRecord(String hostPort, String identifier, String nickname) throws IOException {
+    public NodeRecord(String hostPort, int identifier, String nickname) throws IOException {
         this.host = hostPort.split(":")[0];
         this.port = Integer.parseInt(hostPort.split(":")[1]);
         this.identifier = identifier;
@@ -21,7 +21,7 @@ public class NodeRecord {
 
     public int getPort() { return port; }
 
-    public String getIdentifier() { return identifier; }
+    public int getIdentifier() { return identifier; }
 
     public String getNickname() { return nickname; }
 
@@ -45,6 +45,6 @@ public class NodeRecord {
 
     @Override
     public String toString() {
-        return this.getIdentifier();
+        return this.getNickname();
     }
 }

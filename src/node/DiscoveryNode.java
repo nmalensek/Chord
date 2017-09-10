@@ -14,8 +14,8 @@ public class DiscoveryNode implements Node {
 
     private static String discoveryHost;
     private static int discoveryPort;
-    private HashMap<String, NodeRecord> registeredPeers = new HashMap<>();
-    private ArrayList<NodeRecord> randomNodes = new ArrayList<>();
+    private HashMap<Integer, NodeRecord> registeredPeers = new HashMap<>();
+    private ArrayList<Integer> randomNodes = new ArrayList<>();
     private TCPSender sender = new TCPSender();
 
     public DiscoveryNode() {
@@ -31,7 +31,7 @@ public class DiscoveryNode implements Node {
                 checkForCollision(newNode);
             } else {
                 registeredPeers.put(newNode.getIdentifier(), newNode);
-                randomNodes.add(newNode);
+                randomNodes.add(newNode.getIdentifier());
             }
     }
 
@@ -41,7 +41,7 @@ public class DiscoveryNode implements Node {
             if (registeredPeers.get(node.getIdentifier()) == null) {
                 NodeRecord randomNode = chooseRandomNode(); //choose from overlay nodes before new node is added.
                 registeredPeers.put(node.getIdentifier(), node);
-                randomNodes.add(node);
+                randomNodes.add(node.getIdentifier());
 
                 NodeInformation messageWithRandomNode = prepareRandomNodeInfoMessage(randomNode);
                 sender.sendToSpecificSocket(newNodeSocket, messageWithRandomNode.getBytes());
@@ -62,15 +62,11 @@ public class DiscoveryNode implements Node {
         return randomNodeInfo;
     }
 
-    private void checkForFileCollision(String fileID, Socket storeDataSocket) throws IOException {
-        if (registeredPeers.get(fileID) == null) {
+    //TODO check for file collisions?
+    private void respondToInquiry(int fileID, Socket storeDataSocket) throws IOException {
             NodeRecord randomNode = chooseRandomNode();
             NodeInformation nodeToContact = prepareRandomNodeInfoMessage(randomNode);
             sender.sendToSpecificSocket(storeDataSocket, nodeToContact.getBytes());
-        } else {
-            Collision collision = new Collision();
-            sender.sendToSpecificSocket(storeDataSocket, collision.getBytes());
-        }
     }
 
     @Override
@@ -82,8 +78,8 @@ public class DiscoveryNode implements Node {
             handleNodeLeaving(((NodeLeaving) event).getSixteenBitID());
             System.out.println("node is leaving.");
         } else if (event instanceof StoreDataInquiry) {
-            String id = ((StoreDataInquiry) event).getSixteenBitID();
-            checkForFileCollision(id, destinationSocket);
+            int id = ((StoreDataInquiry) event).getSixteenBitID();
+            respondToInquiry(id, destinationSocket);
         }
     }
 
@@ -92,18 +88,17 @@ public class DiscoveryNode implements Node {
 
     }
 
-    private synchronized void handleNodeLeaving(String nodeID) {
+    private synchronized void handleNodeLeaving(int nodeID) {
         NodeRecord removedNode = registeredPeers.remove(nodeID);
         randomNodes.remove(removedNode);
     }
 
     private NodeRecord constructNewNode(Event event) throws IOException {
         String hostPort = ((NodeInformation) event).getHostPort();
-        String identifier = ((NodeInformation) event).getSixteenBitID();
+        int identifier = ((NodeInformation) event).getSixteenBitID();
         String nickname = ((NodeInformation) event).getNickname();
-        NodeRecord node = new NodeRecord(hostPort, identifier, nickname);
 
-        return node;
+        return new NodeRecord(hostPort, identifier, nickname);
     }
 
     /**

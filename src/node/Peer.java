@@ -1,10 +1,6 @@
 package node;
 
-import data.ConvertHex;
-import messaging.Collision;
-import messaging.Event;
-import messaging.NodeInformation;
-import messaging.NodeLeaving;
+import messaging.*;
 import transport.TCPSender;
 import transport.TCPServerThread;
 import util.ShutdownHook;
@@ -17,19 +13,16 @@ import java.util.HashMap;
 
 public class Peer implements Node {
 
-    private static String initialIdentifier;
+    private static int nodeIdentifier;
     private static String peerHost;
     private static int peerPort;
     private static String discoveryNodeHost;
     private static int discoveryNodePort;
-    private String convertedIdentifier;
-    private ConvertHex convertHex = new ConvertHex();
     private TCPSender sender = new TCPSender();
     private NodeRecord predecessor;
     private HashMap<Integer, NodeRecord> fingerTable = new HashMap<>();
 
     public Peer() throws IOException {
-        convertedIdentifier = convertHex.convertBytesToHex(initialIdentifier.getBytes());
         startup();
         connectToNetwork();
     }
@@ -41,7 +34,7 @@ public class Peer implements Node {
 
     private void connectToNetwork() throws IOException {
         NodeInformation nodeInformation = new NodeInformation();
-        nodeInformation.setSixteenBitID(convertedIdentifier);
+        nodeInformation.setSixteenBitID(nodeIdentifier);
         nodeInformation.setHostPort(peerHost + ":" + peerPort);
         nodeInformation.setNickname(peerHost + ":" + peerPort);
         sender.sendToSpecificSocket(new Socket(discoveryNodeHost, discoveryNodePort), nodeInformation.getBytes());
@@ -52,9 +45,8 @@ public class Peer implements Node {
     }
 
     private void addShutDownHook() {
-        final Thread mainThread = Thread.currentThread();
         Runtime.getRuntime().addShutdownHook(new ShutdownHook(sender, fingerTable.get(1),
-                predecessor, convertedIdentifier, discoveryNodeHost, discoveryNodePort));
+                predecessor, nodeIdentifier, discoveryNodeHost, discoveryNodePort));
     }
 
     @Override
@@ -64,10 +56,10 @@ public class Peer implements Node {
             addShutDownHook();
         } else if (event instanceof Collision) {
             //another node already has that id, get a new id and retry
-            convertedIdentifier = String.valueOf(System.currentTimeMillis());
+            //TODO prompt user for new ID
             connectToNetwork();
         } else if (event instanceof NodeLeaving) {
-            if (fingerTable.get(1).getIdentifier().equals(((NodeLeaving) event).getSixteenBitID())) {
+            if (fingerTable.get(1).getIdentifier() == (((NodeLeaving) event).getSixteenBitID())) {
                 //successor left
                 fingerTable.remove(1);
             } else {
@@ -75,6 +67,22 @@ public class Peer implements Node {
                 predecessor = null;
             }
             //update finger table
+        } else if (event instanceof Lookup) {
+            processLookup(((Lookup) event));
+        }
+    }
+
+    private void processLookup(Lookup lookupEvent) throws IOException {
+        int payload = lookupEvent.getPayloadID();
+        if (payload > predecessor.getIdentifier() && payload <= nodeIdentifier) {
+            DestinationNode thisNodeIsSink = new DestinationNode();
+            thisNodeIsSink.setHostPort(peerHost + ":" + peerPort);
+            String originatingNode = lookupEvent.getRoutingPath().split(",")[0];
+            String originatingHost = originatingNode.split(":")[0];
+            int originatingPort = Integer.parseInt(originatingNode.split(":")[1]);
+            sender.sendToSpecificSocket(new Socket(originatingHost, originatingPort), thisNodeIsSink.getBytes());
+        } else {
+
         }
     }
 
@@ -84,15 +92,11 @@ public class Peer implements Node {
     }
 
     public static void main(String[] args) throws UnknownHostException {
-        if (args.length == 4) {
-            initialIdentifier = args[3];
-        } else {
-            initialIdentifier = String.valueOf(System.currentTimeMillis());
-        }
         peerHost = Inet4Address.getLocalHost().getHostName();
         peerPort = Integer.parseInt(args[0]);
         discoveryNodeHost = args[1];
         discoveryNodePort = Integer.parseInt(args[2]);
+        nodeIdentifier = Integer.parseInt(args[3]);
 
         try {
             Peer peer = new Peer();

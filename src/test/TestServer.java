@@ -27,6 +27,11 @@ public class TestServer implements Node{
         }
     }
 
+    @Override
+    public void processText(String text) throws IOException {
+
+    }
+
     public static void main(String[] args) {
         TestServer testServer = new TestServer();
         testServer.startServer();
