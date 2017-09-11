@@ -26,7 +26,6 @@ public class TestFileServer implements Node {
             System.out.println("sending file");
             FilePayload file = new FilePayload();
             file.setFileID(123456);
-            file.setFilepath(Paths.get("LexusVSV.pdf"));
             file.setFileToTransfer(new File("LexusVSV.pdf"));
 
             TCPSender sender = new TCPSender();

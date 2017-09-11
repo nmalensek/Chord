@@ -9,7 +9,7 @@ public class FilePayload implements Protocol, Event {
     private int messageType = FILE;
     private int fileID;
     private File fileToTransfer;
-    private Path filepath;
+    private String fileName;
     private byte[] fileByteArray;
 
     @Override
@@ -21,8 +21,8 @@ public class FilePayload implements Protocol, Event {
     public File getFileToTransfer() { return fileToTransfer; }
     public void setFileToTransfer(File fileToTransfer) { this.fileToTransfer = fileToTransfer; }
 
-    public Path getFilepath() { return filepath; }
-    public void setFilepath(Path filepath) { this.filepath = filepath; }
+    public String getFileName() { return fileName; }
+    public void setFileName(String fileName) { this.fileName = fileName; }
 
     public int getFileID() { return fileID; }
     public void setFileID(int fileID) { this.fileID = fileID; }
@@ -44,6 +44,11 @@ public class FilePayload implements Protocol, Event {
 
         dataOutputStream.writeInt(messageType);
         dataOutputStream.writeInt(fileID);
+
+        byte[] fileNameBytes = fileName.getBytes();
+        int fileNameLength = fileNameBytes.length;
+        dataOutputStream.writeInt(fileNameLength);
+        dataOutputStream.write(fileNameBytes);
 
         byte[] fileBytes = Files.readAllBytes(fileToTransfer.toPath());
         int fileBytesLength = fileBytes.length;
@@ -68,14 +73,17 @@ public class FilePayload implements Protocol, Event {
         messageType = dataInputStream.readInt();
         fileID = dataInputStream.readInt();
 
+        int fileNameLength = dataInputStream.readInt();
+        byte[] fileNameBytes = new byte[fileNameLength];
+        dataInputStream.readFully(fileNameBytes);
+
+        fileName = new String(fileNameBytes);
+
         int fileLength = dataInputStream.readInt();
         byte[] fileBytes = new byte[fileLength];
         dataInputStream.readFully(fileBytes);
 
         fileByteArray = fileBytes;
-//        Files.write(filepath, fileBytes);
-//
-//        fileToTransfer = filepath.toFile();
 
         byteArrayInputStream.close();
         dataInputStream.close();
@@ -84,8 +92,6 @@ public class FilePayload implements Protocol, Event {
     public void writeFile(byte[] bytes, String filepath) throws IOException {
         Path path = Paths.get(filepath);
         Files.write(path, bytes);
-
-//        fileToTransfer = filepath.toFile();
     }
 
 }

@@ -22,6 +22,7 @@ public class Peer implements Node {
     private TCPSender sender = new TCPSender();
     private NodeRecord predecessor;
     private HashMap<Integer, NodeRecord> fingerTable = new HashMap<>();
+    private HashMap<Integer, String> filesResponsibleFor = new HashMap<>();
 
     public Peer() throws IOException {
         startup();
@@ -74,7 +75,9 @@ public class Peer implements Node {
         } else if (event instanceof Lookup) {
             processLookup(((Lookup) event));
         } else if (event instanceof FilePayload) {
-            ((FilePayload) event).writeFile(((FilePayload) event).getFileByteArray(), "test.png");
+            FilePayload file = (FilePayload) event;
+            file.writeFile(file.getFileByteArray(), "/tmp/" + file.getFileName());
+            filesResponsibleFor.put(file.getFileID(), "/tmp/" + file.getFileName());
         }
     }
 
@@ -92,7 +95,7 @@ public class Peer implements Node {
             int originatingPort = Integer.parseInt(originatingNode.split(":")[1]);
             sender.sendToSpecificSocket(new Socket(originatingHost, originatingPort), thisNodeIsSink.getBytes());
         } else {
-
+            //route message to appropriate node
         }
     }
 

@@ -51,7 +51,13 @@ public class StoreData implements Node {
             lookup.setPayloadID(fileID);
             lookup.setRoutingPath(thisNodeHost + ":" + thisNodePort + ",");
         } else if (event instanceof DestinationNode) {
-            //send image to there
+            FilePayload file = new FilePayload();
+            file.setFileID(fileID);
+            file.setFileName(filePath.getFileName().toString());
+            file.setFileToTransfer(new File(filePath.toString()));
+
+            TCPSender sender = new TCPSender();
+            sender.sendToSpecificSocket(destinationSocket, file.getBytes());
         }
     }
 
@@ -62,7 +68,7 @@ public class StoreData implements Node {
             case "file":
                 filePath = Paths.get(text.split("\\s")[1]);
                 file = new File(text.split("\\s")[1]);
-                fileID = Integer.parseInt(text.split("\\s")[2]);
+                fileID = Integer.parseInt(text.split("\\s")[2]); //TODO: Make this be calculated automatically!
                 StoreDataInquiry inquiry = new StoreDataInquiry();
                 inquiry.setSixteenBitID(fileID);
                 sender.sendToSpecificSocket(discoveryNodeSocket, inquiry.getBytes());

@@ -32,7 +32,7 @@ public class TCPReceiverThread extends Thread implements Protocol {
      **/
     public void run() {
         int dataLength;
-        while (communicationSocket != null) {
+        while (!communicationSocket.isClosed()) {
             try {
                 dataLength = dataInputStream.readInt();
 
@@ -42,8 +42,7 @@ public class TCPReceiverThread extends Thread implements Protocol {
                 determineMessageType(data);
 
             } catch (IOException ioe) {
-                System.out.println("failed");
-//                ioe.printStackTrace();
+                ioe.printStackTrace();
             } catch (ClassNotFoundException e) {
                 e.printStackTrace();
             }

@@ -21,8 +21,4 @@ public class TCPSender {
             e.printStackTrace();
         }
     }
-
-    public synchronized void sendLargeFile(Socket socket, byte[] data) throws IOException {
-
-    }
 }
