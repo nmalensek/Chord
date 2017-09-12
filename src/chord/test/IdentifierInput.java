@@ -23,6 +23,8 @@ public class IdentifierInput {
         short sixteenBit = (short) ((short)(ID & 0xffff) - ((ID & 0x8000) << 1));
 //        sixteenBit = (short) Math.abs(sixteenBit);
         if (sixteenBit <= 32767 && sixteenBit > -32768) {
+            int test = sixteenBit;
+            System.out.println(test);
             System.out.println(sixteenBit);
         } else {
             System.out.println("NOK");

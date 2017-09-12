@@ -3,6 +3,7 @@ package chord.node;
 import chord.messages.*;
 import chord.transport.TCPSender;
 import chord.transport.TCPServerThread;
+import chord.util.CreateIdentifier;
 import chord.util.TextInputThread;
 
 import java.io.File;
@@ -68,12 +69,16 @@ public class StoreData implements Node {
         String command = text.split("\\s")[0];
         switch (command) {
             case "file":
-                filePath = Paths.get(text.split("\\s")[1]);
-                file = new File(text.split("\\s")[1]);
-                fileID = Integer.parseInt(text.split("\\s")[2]); //TODO: Make this be calculated automatically!
-                StoreDataInquiry inquiry = new StoreDataInquiry();
-                inquiry.setSixteenBitID(fileID);
-                sender.sendToSpecificSocket(discoveryNodeSocket, inquiry.getBytes());
+                try {
+                    filePath = Paths.get(text.split("\\s")[1]);
+                    file = new File(text.split("\\s")[1]);
+                    fileID = CreateIdentifier.createIdentifier(filePath.getFileName().toString());
+                    StoreDataInquiry inquiry = new StoreDataInquiry();
+                    inquiry.setSixteenBitID(fileID);
+                    sender.sendToSpecificSocket(discoveryNodeSocket, inquiry.getBytes());
+                } catch (StringIndexOutOfBoundsException s) {
+                    System.out.println("Could not generate ID from the supplied filename, please rename and try again");
+                }
                 break;
         }
 
