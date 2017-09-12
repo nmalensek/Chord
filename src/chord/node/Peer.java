@@ -3,6 +3,7 @@ package chord.node;
 import chord.messages.*;
 import chord.transport.TCPSender;
 import chord.transport.TCPServerThread;
+import chord.util.CreateIdentifier;
 import chord.util.DiagnosticPrinterThread;
 import chord.util.QuerySuccessorThread;
 import chord.util.ShutdownHook;
@@ -64,7 +65,7 @@ public class Peer implements Node {
     }
 
     private void constructFingerTable() {
-        for (int i = 0; i < 16; i++) { //16-bit ID space, so all nodes have 16 FT entries.
+        for (int i = 1; i < 17; i++) { //16-bit ID space, so all nodes have 16 FT entries.
 
         }
     }
@@ -85,9 +86,9 @@ public class Peer implements Node {
             promptForNewID();
             connectToNetwork();
         } else if (event instanceof NodeLeaving) {
-            if (fingerTable.get(0).getIdentifier() == (((NodeLeaving) event).getSixteenBitID())) {
+            if (fingerTable.get(1).getIdentifier() == (((NodeLeaving) event).getSixteenBitID())) {
                 //successor left
-                fingerTable.remove(0); //TODO: re-make finger table instead of just remove
+                fingerTable.remove(1); //TODO: re-make finger table instead of just remove
             } else {
                 //predecessor left
                 predecessor = null;
@@ -185,11 +186,16 @@ public class Peer implements Node {
 
     public static void main(String[] args) throws UnknownHostException {
         peerHost = Inet4Address.getLocalHost().getHostName();
-        nodeIdentifier = Integer.parseInt(args[0]);
         queryInterval = Integer.parseInt(args[1]);
         diagnosticInterval = Integer.parseInt(args[2]);
         discoveryNodeHost = args[3];
         discoveryNodePort = Integer.parseInt(args[4]);
+
+        if (args[0].equals("na")) {
+            nodeIdentifier = CreateIdentifier.createIdentifier(String.valueOf(System.currentTimeMillis()));
+        } else {
+            nodeIdentifier = Integer.parseInt(args[0]);
+        }
 
         try {
             Peer peer = new Peer();

@@ -29,7 +29,7 @@ public class ShutdownHook extends Thread {
     public void run() {
         NodeLeaving leaving = new NodeLeaving();
         leaving.setSixteenBitID(ownerNodeID);
-        NodeRecord successor = owner.getFingerTable().get(0);
+        NodeRecord successor = owner.getFingerTable().get(1);
         NodeRecord predecessor = owner.getPredecessor();
         try {
             Socket successorSocket = new Socket(successor.getHost(), successor.getPort());

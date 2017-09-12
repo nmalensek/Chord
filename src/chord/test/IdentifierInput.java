@@ -1,5 +1,6 @@
 package chord.test;
 
+import chord.util.ComputeHash;
 import chord.util.ConvertHex;
 
 import java.io.IOException;
@@ -11,48 +12,42 @@ public class IdentifierInput {
     private ConvertHex convertHex = new ConvertHex();
 
     private void printIDHash() throws IOException {
-
-        System.out.println(convertHex.convertBytesToHex(identifier.getBytes()));
-        byte[] b = convertHex.convertHexToBytes("6e69636b");
-        for (Byte kasf : b) {
-            System.out.print(kasf);
+        String hashedID = ComputeHash.SHA1FromBytes(identifier.getBytes());
+//        System.out.println("Hashed ID: " + hashedID);
+        byte[] hashByte = convertHex.convertHexToBytes(hashedID);
+//        for (byte b : hashByte) {
+//            System.out.print(b);
+//        }
+//        System.out.println("");
+        int ID = java.nio.ByteBuffer.wrap(hashByte).getInt();
+        short sixteenBit = (short) ((short)(ID & 0xffff) - ((ID & 0x8000) << 1));
+//        sixteenBit = (short) Math.abs(sixteenBit);
+        if (sixteenBit <= 32767 && sixteenBit > -32768) {
+            System.out.println(sixteenBit);
+        } else {
+            System.out.println("NOK");
         }
-//        Path path = Paths.get("FullSizeRender.jpg");
-//        byte[] picBytes = Files.readAllBytes(path);
-//        String chord.messaging.test = convertHex.convertBytesToHex(picBytes);
-////        System.out.println(chord.messaging.test);
-//        System.out.println(Integer.decode(chord.messaging.test));
-//        String n = "nicholas";
-//        System.out.println(Integer.decode(n));
-//        byte[] stringToBytes = convertHex.convertHexToBytes("nicholas");
-//        System.out.println(convertHex.convertBytesToHex(stringToBytes));
-    }
-
-    private void retryIdentifier() {
-        try {
-            Thread.sleep(5);
-            identifier = String.valueOf(System.currentTimeMillis());
-            nanoIdentifier = String.valueOf(System.nanoTime());
-            printIDHash();
-        } catch (IOException e) {
-            e.printStackTrace();
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
+//        System.out.println("");
+//        System.out.println("final ID: " + ID);
     }
 
     public static void main(String[] args) throws IOException {
         if (args.length > 0) {
             identifier = args[0];
-            nanoIdentifier = String.valueOf(System.nanoTime());
         } else {
             identifier = String.valueOf(System.currentTimeMillis());
-            nanoIdentifier = String.valueOf(System.nanoTime());
         }
-        System.out.println("argument or milliseconds: " + identifier);
-        System.out.println("nanotime: " + nanoIdentifier);
-        IdentifierInput input = new IdentifierInput();
-        input.printIDHash();
-//        input.retryIdentifier();
+        IdentifierInput identifierInput = new IdentifierInput();
+        while (true) {
+            try {
+                identifier = String.valueOf(System.currentTimeMillis());
+                identifierInput.printIDHash();
+                Thread.sleep(100);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            } catch (StringIndexOutOfBoundsException se) {
+
+            }
+        }
     }
 }

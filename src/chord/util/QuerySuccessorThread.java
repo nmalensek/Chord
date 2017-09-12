@@ -20,7 +20,7 @@ public class QuerySuccessorThread extends Thread {
     }
 
     private void queryOwnerSuccessor() throws IOException {
-        NodeRecord successor = owner.getFingerTable().get(0);
+        NodeRecord successor = owner.getFingerTable().get(1);
         Socket successorSocket = new Socket(successor.getHost(), successor.getPort());
         try {
             Query query = new Query();

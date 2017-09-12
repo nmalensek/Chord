@@ -66,7 +66,7 @@ public class DiagnosticPrinterThread extends Thread {
     }
 
     private void printSuccessorAndPredecessor() {
-        NodeRecord successor = fingerTableCopy.get(0);
+        NodeRecord successor = fingerTableCopy.get(1);
         NodeRecord predecessor = owner.getPredecessor();
         System.out.printf("Successor: " + successor.getIdentifier() + ":" + successor.getNickname());
         System.out.println("Predecessor: " + predecessor.getIdentifier() + ":" + predecessor.getNickname());
