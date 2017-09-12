@@ -3,6 +3,7 @@ package node;
 import messaging.*;
 import transport.TCPSender;
 import transport.TCPServerThread;
+import util.DiagnosticPrinterThread;
 import util.ShutdownHook;
 
 import java.io.IOException;
@@ -11,6 +12,7 @@ import java.net.Socket;
 import java.net.UnknownHostException;
 import java.util.HashMap;
 import java.util.Scanner;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class Peer implements Node {
 
@@ -19,19 +21,35 @@ public class Peer implements Node {
     private static int peerPort;
     private static String discoveryNodeHost;
     private static int discoveryNodePort;
+    private static int queryInterval;
+    private static int diagnosticInterval;
     private TCPSender sender = new TCPSender();
+    private TCPServerThread serverThread;
     private NodeRecord predecessor;
-    private HashMap<Integer, NodeRecord> fingerTable = new HashMap<>();
-    private HashMap<Integer, String> filesResponsibleFor = new HashMap<>();
+    private final HashMap<Integer, NodeRecord> fingerTable = new HashMap<>();
+    private final HashMap<Integer, String> filesResponsibleFor = new HashMap<>();
+    private AtomicBoolean fingerTableModified = new AtomicBoolean();
+    private AtomicBoolean filesResponsibleForModified = new AtomicBoolean();
+    private boolean queryThreadRunning;
 
     public Peer() throws IOException {
-        startup();
+        startThreads();
+        setPort();
         connectToNetwork();
     }
 
-    private void startup() {
-        TCPServerThread serverThread = new TCPServerThread(this, peerPort);
+    private void startThreads() {
+        serverThread = new TCPServerThread(this, 0);
         serverThread.start();
+        DiagnosticPrinterThread diagnosticPrinterThread =
+                new DiagnosticPrinterThread(this, diagnosticInterval);
+        diagnosticPrinterThread.start();
+    }
+
+    private void setPort() {
+        while(serverThread.getPortNumber() == 0) {
+            peerPort = serverThread.getPortNumber();
+        }
     }
 
     private void connectToNetwork() throws IOException {
@@ -77,7 +95,9 @@ public class Peer implements Node {
         } else if (event instanceof FilePayload) {
             FilePayload file = (FilePayload) event;
             file.writeFile(file.getFileByteArray(), "/tmp/" + file.getFileName());
-            filesResponsibleFor.put(file.getFileID(), "/tmp/" + file.getFileName());
+            synchronized (filesResponsibleFor) {
+                filesResponsibleFor.put(file.getFileID(), "/tmp/" + file.getFileName());
+            }
         }
     }
 
@@ -109,21 +129,41 @@ public class Peer implements Node {
             }
         }
 
-    @Override
-    public void processText(String text) {
-
+    public HashMap<Integer, NodeRecord> getFingerTable() {
+        synchronized (fingerTable) {
+            return fingerTable;
+        }
     }
+
+    public HashMap<Integer, String> getFilesResponsibleFor() {
+        synchronized (filesResponsibleFor) {
+            return filesResponsibleFor;
+        }
+    }
+
+    public NodeRecord getPredecessor() {
+        synchronized (predecessor) {
+            return predecessor;
+        }
+    }
+
+    public boolean isFingerTableModified() { return fingerTableModified.get(); }
+    public boolean isFilesResponsibleForModified() { return filesResponsibleForModified.get(); }
+
+    @Override
+    public void processText(String text) { }
 
     public static void main(String[] args) throws UnknownHostException {
         peerHost = Inet4Address.getLocalHost().getHostName();
-        peerPort = Integer.parseInt(args[0]);
-        discoveryNodeHost = args[1];
-        discoveryNodePort = Integer.parseInt(args[2]);
-        nodeIdentifier = Integer.parseInt(args[3]);
+        nodeIdentifier = Integer.parseInt(args[0]);
+        queryInterval = Integer.parseInt(args[1]);
+        diagnosticInterval = Integer.parseInt(args[2]);
+        discoveryNodeHost = args[3];
+        discoveryNodePort = Integer.parseInt(args[4]);
 
         try {
             Peer peer = new Peer();
-            peer.startup();
+            peer.startThreads();
         } catch (IOException e) {
             e.printStackTrace();
         }

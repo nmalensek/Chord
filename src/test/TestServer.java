@@ -14,10 +14,24 @@ import java.util.Map;
 public class TestServer implements Node{
 
     private Map<String, NodeRecord> nodeMap = new HashMap<>();
+    private int port;
+    private TCPServerThread testServerThread;
 
+
+    public TestServer() {
+        startServer();
+        test();
+    }
     private void startServer() {
-        TCPServerThread testServerThread = new TCPServerThread(this, 60851);
+        testServerThread = new TCPServerThread(this, 0);
         testServerThread.start();
+    }
+
+    private void test() {
+        while(testServerThread.getPortNumber() == 0) {
+            port = testServerThread.getPortNumber();
+        }
+        System.out.println(port);
     }
 
     @Override
@@ -34,6 +48,5 @@ public class TestServer implements Node{
 
     public static void main(String[] args) {
         TestServer testServer = new TestServer();
-        testServer.startServer();
     }
 }

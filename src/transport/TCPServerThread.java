@@ -24,10 +24,10 @@ public class TCPServerThread extends Thread {
 
     public int getPortNumber() { return portNum; }
 
-    //uses a thread pool for better efficiency instead of making a new thread per connection
     public void run() {
         try {
             serverSocket = new ServerSocket(portNum);
+            portNum = serverSocket.getLocalPort();
             System.out.println("Server running on port " + serverSocket.getLocalPort() + "...");
 
             while(true) {
