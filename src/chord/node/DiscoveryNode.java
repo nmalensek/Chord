@@ -39,7 +39,7 @@ public class DiscoveryNode implements Node {
         Socket newNodeSocket = new Socket(node.getHost(), node.getPort());
         try {
             if (registeredPeers.get(node.getIdentifier()) == null) {
-                NodeRecord randomNode = chooseRandomNode(); //choose from overlay nodes before new chord.messaging.node is added.
+                NodeRecord randomNode = chooseRandomNode(); //choose from overlay nodes before new node is added.
                 registeredPeers.put(node.getIdentifier(), node);
                 randomNodes.add(node.getIdentifier());
 

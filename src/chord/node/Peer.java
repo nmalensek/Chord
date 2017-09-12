@@ -80,8 +80,8 @@ public class Peer implements Node {
             //figure out where to go!
             addShutDownHook();
         } else if (event instanceof Collision) {
-            //another chord.messaging.node already has that id, get a new id and retry
-            System.out.println("This chord.messaging.node's ID already exists in the overlay. Please enter a new one:");
+            //another node already has that id, get a new id and retry
+            System.out.println("This node's ID already exists in the overlay. Please enter a new one:");
             promptForNewID();
             connectToNetwork();
         } else if (event instanceof NodeLeaving) {
@@ -102,14 +102,34 @@ public class Peer implements Node {
                 filesResponsibleFor.put(file.getFileID(), "/tmp/" + file.getFileName());
             }
         } else if (event instanceof Query) {
-            //TODO: send predecessor info
+            //send predecessor info
+            sender.sendToSpecificSocket(destinationSocket, writeQueryResponse());
         } else if (event instanceof QueryResponse) {
-            //TODO: Check whether the predecessor's this chord.messaging.node.
+            QueryResponse queryResponseMessage = (QueryResponse) event;
+            if (queryResponseMessage.getPredecessorID() != nodeIdentifier) {
+                updateSuccessor(queryResponseMessage);
+            }
         }
     }
 
-    private void storeFile() {
+    private byte[] writeQueryResponse() throws IOException {
+        QueryResponse queryResponse = new QueryResponse();
+        queryResponse.setPredecessorID(predecessor.getIdentifier());
+        queryResponse.setPredecessorHostPort(predecessor.getHost() + ":" + predecessor.getPort());
+        queryResponse.setPredecessorNickname(predecessor.getNickname());
+        return queryResponse.getBytes();
+    }
 
+    private void updateSuccessor(QueryResponse queryResponse) throws IOException {
+        NodeRecord updatedSuccessor =
+                new NodeRecord(queryResponse.getPredecessorHostPort(),
+                        queryResponse.getPredecessorID(),
+                        queryResponse.getPredecessorNickname());
+        fingerTable.put(0, updatedSuccessor);
+        fingerTableModified.set(true);
+        Query queryNewSuccessor = new Query(); //check if this node is successor to new node
+        sender.sendToSpecificSocket(
+                new Socket(fingerTable.get(0).getHost(), fingerTable.get(0).getPort()), queryNewSuccessor.getBytes());
     }
 
     private void processLookup(Lookup lookupEvent) throws IOException {
@@ -121,8 +141,11 @@ public class Peer implements Node {
             String originatingHost = originatingNode.split(":")[0];
             int originatingPort = Integer.parseInt(originatingNode.split(":")[1]);
             sender.sendToSpecificSocket(new Socket(originatingHost, originatingPort), thisNodeIsSink.getBytes());
+            System.out.println((lookupEvent.getNumHops() + 1));
         } else {
-            //route message to appropriate chord.messaging.node
+            //route message to appropriate node
+            lookupEvent.setNumHops((lookupEvent.getNumHops() + 1));
+            System.out.println(lookupEvent.getNumHops());
         }
     }
 
