@@ -32,6 +32,20 @@ public final class EventFactory {
         return successfulEntry;
     }
 
+    public static Event<Query> queryEvent(
+            byte[] marshalledBytes) throws IOException {
+        Query query = new Query();
+        query.readMessage(marshalledBytes);
+        return query;
+    }
+
+    public static Event<QueryResponse> queryResponseEvent(
+            byte[] marshalledBytes) throws IOException {
+        QueryResponse response = new QueryResponse();
+        response.readMessage(marshalledBytes);
+        return response;
+    }
+
     public static Event<Collision> collisionEvent(
             byte[] marshalledBytes) throws IOException {
         Collision collision = new Collision();

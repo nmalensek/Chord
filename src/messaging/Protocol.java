@@ -8,5 +8,7 @@ public interface Protocol {
     int LOOKUP = 4;
     int DESTINATION = 5;
     int FILE = 6;
+    int QUERY = 7;
+    int QUERY_RESPONSE = 8;
     int EXIT_OVERLAY = 99;
 }

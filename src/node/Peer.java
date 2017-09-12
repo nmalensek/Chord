@@ -30,7 +30,6 @@ public class Peer implements Node {
     private final HashMap<Integer, String> filesResponsibleFor = new HashMap<>();
     private AtomicBoolean fingerTableModified = new AtomicBoolean();
     private AtomicBoolean filesResponsibleForModified = new AtomicBoolean();
-    private boolean queryThreadRunning;
 
     public Peer() throws IOException {
         startThreads();
@@ -98,6 +97,10 @@ public class Peer implements Node {
             synchronized (filesResponsibleFor) {
                 filesResponsibleFor.put(file.getFileID(), "/tmp/" + file.getFileName());
             }
+        } else if (event instanceof Query) {
+            //TODO: send predecessor info
+        } else if (event instanceof QueryResponse) {
+            //TODO: Check whether the predecessor's this node.
         }
     }
 

@@ -75,8 +75,10 @@ public class DiagnosticPrinterThread extends Thread {
     @Override
     public void run() {
         try {
-            Thread.sleep(diagnosticInterval);
-            printDiagnostics();
+            while (true) {
+                Thread.sleep(diagnosticInterval);
+                printDiagnostics();
+            }
         } catch (InterruptedException e) {
             e.printStackTrace();
         }

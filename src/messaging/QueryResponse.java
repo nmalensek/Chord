@@ -2,24 +2,24 @@ package messaging;
 
 import java.io.*;
 
-public class NodeInformation implements Protocol, Event {
-    private int messageType = ENTER_OVERLAY;
-    private int sixteenBitID;
-    private String hostPort;
-    private String nickname;
+public class QueryResponse implements Protocol, Event {
+    private int messageType = QUERY_RESPONSE;
+    private int predecessorID;
+    private String predecessorHostPort;
+    private String predecessorNickname;
 
-    public NodeInformation getType() {
+    public QueryResponse getType() {
         return this;
     }
 
-    public int getSixteenBitID() { return sixteenBitID; }
-    public void setSixteenBitID(int sixteenBitID) { this.sixteenBitID = sixteenBitID; }
+    public int getPredecessorID() { return predecessorID; }
+    public void setPredecessorID(int predecessorID) { this.predecessorID = predecessorID; }
 
-    public String getHostPort() { return hostPort; }
-    public void setHostPort(String hostPort) { this.hostPort = hostPort; }
+    public String getPredecessorHostPort() { return predecessorHostPort; }
+    public void setPredecessorHostPort(String predecessorHostPort) { this.predecessorHostPort = predecessorHostPort; }
 
-    public String getNickname() { return nickname; }
-    public void setNickname(String nickname) { this.nickname = nickname; }
+    public String getPredecessorNickname() { return predecessorNickname; }
+    public void setPredecessorNickname(String predecessorNickname) { this.predecessorNickname = predecessorNickname; }
 
     @Override
     public int getMessageType() {
@@ -35,14 +35,14 @@ public class NodeInformation implements Protocol, Event {
 
         dataOutputStream.writeInt(messageType);
 
-        dataOutputStream.writeInt(sixteenBitID);
+        dataOutputStream.writeInt(predecessorID);
 
-        byte[] hostPortBytes = hostPort.getBytes();
+        byte[] hostPortBytes = predecessorHostPort.getBytes();
         int hostPortLength = hostPortBytes.length;
         dataOutputStream.writeInt(hostPortLength);
         dataOutputStream.write(hostPortBytes);
 
-        byte[] nicknameBytes = nickname.getBytes();
+        byte[] nicknameBytes = predecessorNickname.getBytes();
         int nicknameLength = nicknameBytes.length;
         dataOutputStream.writeInt(nicknameLength);
         dataOutputStream.write(nicknameBytes);
@@ -64,24 +64,21 @@ public class NodeInformation implements Protocol, Event {
 
         messageType = dataInputStream.readInt();
 
-        sixteenBitID = dataInputStream.readInt();
+        predecessorID = dataInputStream.readInt();
 
         int hostPortLength = dataInputStream.readInt();
         byte[] hostPortBytes = new byte[hostPortLength];
         dataInputStream.readFully(hostPortBytes);
 
-        hostPort = new String(hostPortBytes);
+        predecessorHostPort = new String(hostPortBytes);
 
         int nicknameLength = dataInputStream.readInt();
         byte[] nicknameBytes = new byte[nicknameLength];
         dataInputStream.readFully(nicknameBytes);
 
-        nickname = new String(nicknameBytes);
+        predecessorNickname = new String(nicknameBytes);
 
         byteArrayInputStream.close();
         dataInputStream.close();
     }
-
-
-
 }

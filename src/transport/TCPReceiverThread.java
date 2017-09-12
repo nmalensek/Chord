@@ -81,6 +81,14 @@ public class TCPReceiverThread extends Thread implements Protocol {
                         eventFactory.collisionEvent(marshalledBytes);
                 node.onEvent(collisionEvent, communicationSocket);
                 break;
+            case QUERY:
+                Event<Query> queryEvent =
+                        eventFactory.queryEvent(marshalledBytes);
+                node.onEvent(queryEvent, communicationSocket);
+            case QUERY_RESPONSE:
+                Event<QueryResponse> queryResponseEvent =
+                        eventFactory.queryResponseEvent(marshalledBytes);
+                node.onEvent(queryResponseEvent, communicationSocket);
             case STORE_DATA_INQUIRY:
                 Event<StoreDataInquiry> storeDataInquiryEvent =
                         eventFactory.storeDataInquiryEvent(marshalledBytes);
