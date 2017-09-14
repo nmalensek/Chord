@@ -10,6 +10,7 @@ public class FilePayload implements Protocol, Event {
     private int fileID;
     private File fileToTransfer;
     private String fileName;
+    private String sendingNodeHostPort;
     private byte[] fileByteArray;
 
     @Override
@@ -30,10 +31,12 @@ public class FilePayload implements Protocol, Event {
     public byte[] getFileByteArray() {
         return fileByteArray;
     }
-
     public void setFileByteArray(byte[] fileByteArray) {
         this.fileByteArray = fileByteArray;
     }
+
+    public String getSendingNodeHostPort() { return sendingNodeHostPort; }
+    public void setSendingNodeHostPort(String sendingNodeHostPort) { this.sendingNodeHostPort = sendingNodeHostPort; }
 
     //marshalls bytes
     public byte[] getBytes() throws IOException {
@@ -49,6 +52,11 @@ public class FilePayload implements Protocol, Event {
         int fileNameLength = fileNameBytes.length;
         dataOutputStream.writeInt(fileNameLength);
         dataOutputStream.write(fileNameBytes);
+
+        byte[] hostPortBytes = sendingNodeHostPort.getBytes();
+        int hostPortLength = hostPortBytes.length;
+        dataOutputStream.writeInt(hostPortLength);
+        dataOutputStream.write(hostPortBytes);
 
         byte[] fileBytes = Files.readAllBytes(fileToTransfer.toPath());
         int fileBytesLength = fileBytes.length;

@@ -27,19 +27,16 @@ public class DiscoveryNode implements Node {
     }
 
     private synchronized void addNewNodeToOverlay(NodeRecord newNode) throws IOException {
-            if (randomNodes.size() == 0) {
-                checkForCollision(newNode);
-            } else {
                 registeredPeers.put(newNode.getIdentifier(), newNode);
                 randomNodes.add(newNode.getIdentifier());
-            }
+                checkForCollision(newNode);
     }
 
     private synchronized void checkForCollision(NodeRecord node) throws IOException {
         Socket newNodeSocket = new Socket(node.getHost(), node.getPort());
         try {
             if (registeredPeers.get(node.getIdentifier()) == null) {
-                NodeRecord randomNode = chooseRandomNode(); //choose from overlay nodes before new node is added.
+                NodeRecord randomNode = randomNodes.size() == 0 ? node : chooseRandomNode();
                 registeredPeers.put(node.getIdentifier(), node);
                 randomNodes.add(node.getIdentifier());
 
@@ -62,8 +59,7 @@ public class DiscoveryNode implements Node {
         return randomNodeInfo;
     }
 
-    //TODO check for file collisions?
-    private void respondToInquiry(int fileID, Socket storeDataSocket) throws IOException {
+    private void respondToInquiry(Socket storeDataSocket) throws IOException {
             NodeRecord randomNode = chooseRandomNode();
             NodeInformation nodeToContact = prepareRandomNodeInfoMessage(randomNode);
             sender.sendToSpecificSocket(storeDataSocket, nodeToContact.getBytes());
@@ -77,8 +73,7 @@ public class DiscoveryNode implements Node {
         } else if (event instanceof NodeLeaving) {
             handleNodeLeaving(((NodeLeaving) event).getSixteenBitID());
         } else if (event instanceof StoreDataInquiry) {
-            int id = ((StoreDataInquiry) event).getSixteenBitID();
-            respondToInquiry(id, destinationSocket);
+            respondToInquiry(destinationSocket);
         }
     }
 
@@ -98,7 +93,7 @@ public class DiscoveryNode implements Node {
     }
 
     /**
-     * Chooses random chord.messaging.node from overlay to inform new chord.messaging.node about.
+     * Chooses random node from overlay to inform new node about.
      */
     private synchronized NodeRecord chooseRandomNode() {
         int randomNode = ThreadLocalRandom.current().nextInt(0, randomNodes.size());

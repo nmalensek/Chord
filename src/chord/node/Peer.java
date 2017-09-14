@@ -28,6 +28,7 @@ public class Peer implements Node {
     private TCPSender sender = new TCPSender();
     private TCPServerThread serverThread;
     private NodeRecord predecessor;
+    private MessageProcessor messageProcessor;
     private final HashMap<Integer, NodeRecord> fingerTable = new HashMap<>();
     private final HashMap<Integer, String> filesResponsibleFor = new HashMap<>();
     private AtomicBoolean fingerTableModified = new AtomicBoolean();
@@ -37,6 +38,8 @@ public class Peer implements Node {
         startThreads();
         setPort();
         connectToNetwork();
+        messageProcessor = new MessageProcessor(peerHost, peerPort, nodeIdentifier);
+        constructInitialFingerTable();
     }
 
     private void startThreads() {
@@ -64,10 +67,12 @@ public class Peer implements Node {
         sender.sendToSpecificSocket(new Socket(discoveryNodeHost, discoveryNodePort), nodeInformation.getBytes());
     }
 
-    private void constructFingerTable() {
+    private void constructInitialFingerTable() throws IOException {
+        NodeRecord thisNode = new NodeRecord(peerHost + ":" + peerPort, nodeIdentifier, Inet4Address.getLocalHost().getHostName());
         for (int i = 1; i < 17; i++) { //16-bit ID space, so all nodes have 16 FT entries.
-
+            fingerTable.put(i, thisNode);
         }
+        fingerTableModified.set(true);
     }
 
     private void addShutDownHook() {
@@ -79,6 +84,10 @@ public class Peer implements Node {
     public void onEvent(Event event, Socket destinationSocket) throws IOException {
         if (event instanceof NodeInformation) {
             //figure out where to go!
+            NodeInformation information = (NodeInformation) event;
+            if (information.getSixteenBitID() != nodeIdentifier) {
+                //not first node in the ring so there are things to do
+            }
             addShutDownHook();
         } else if (event instanceof Collision) {
             //another node already has that id, get a new id and retry
@@ -95,16 +104,11 @@ public class Peer implements Node {
             }
             //update finger table
         } else if (event instanceof Lookup) {
-            processLookup(((Lookup) event));
+            messageProcessor.processLookup(((Lookup) event), predecessor);
         } else if (event instanceof FilePayload) {
-            FilePayload file = (FilePayload) event;
-            file.writeFile(file.getFileByteArray(), "/tmp/" + file.getFileName());
-            synchronized (filesResponsibleFor) {
-                filesResponsibleFor.put(file.getFileID(), "/tmp/" + file.getFileName());
-            }
+            messageProcessor.processPayload((FilePayload) event, filesResponsibleFor);
         } else if (event instanceof Query) {
-            //send predecessor info
-            sender.sendToSpecificSocket(destinationSocket, writeQueryResponse());
+            sender.sendToSpecificSocket(destinationSocket, writeQueryResponse()); //send predecessor info
         } else if (event instanceof QueryResponse) {
             QueryResponse queryResponseMessage = (QueryResponse) event;
             if (queryResponseMessage.getPredecessorID() != nodeIdentifier) {
@@ -131,24 +135,6 @@ public class Peer implements Node {
         Query queryNewSuccessor = new Query(); //check if this node is successor to new node
         sender.sendToSpecificSocket(
                 new Socket(fingerTable.get(0).getHost(), fingerTable.get(0).getPort()), queryNewSuccessor.getBytes());
-    }
-
-    private void processLookup(Lookup lookupEvent) throws IOException {
-        int payload = lookupEvent.getPayloadID();
-        if (payload > predecessor.getIdentifier() && payload <= nodeIdentifier) {
-            DestinationNode thisNodeIsSink = new DestinationNode();
-            thisNodeIsSink.setHostPort(peerHost + ":" + peerPort);
-            String originatingNode = lookupEvent.getRoutingPath().split(",")[0];
-            String originatingHost = originatingNode.split(":")[0];
-            int originatingPort = Integer.parseInt(originatingNode.split(":")[1]);
-            sender.sendToSpecificSocket(new Socket(originatingHost, originatingPort), thisNodeIsSink.getBytes());
-            System.out.println((lookupEvent.getNumHops() + 1));
-        } else {
-            //route message to appropriate node
-            lookupEvent.setNumHops((lookupEvent.getNumHops() + 1));
-            System.out.println(lookupEvent.getNumHops());
-            //TODO route message using finger table
-        }
     }
 
     private void promptForNewID() {

@@ -58,9 +58,12 @@ public class StoreData implements Node {
             file.setFileID(fileID);
             file.setFileName(filePath.getFileName().toString());
             file.setFileToTransfer(new File(filePath.toString()));
+            file.setSendingNodeHostPort(thisNodeHost + ":" + thisNodePort);
 
             TCPSender sender = new TCPSender();
             sender.sendToSpecificSocket(destinationSocket, file.getBytes());
+        } else if (event instanceof Collision) {
+            System.out.println("A file already exists in the network with that name. Rename the file and try again.");
         }
     }
 
