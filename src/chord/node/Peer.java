@@ -147,6 +147,7 @@ public class Peer implements Node {
             //route message to appropriate node
             lookupEvent.setNumHops((lookupEvent.getNumHops() + 1));
             System.out.println(lookupEvent.getNumHops());
+            //TODO route message using finger table
         }
     }
 

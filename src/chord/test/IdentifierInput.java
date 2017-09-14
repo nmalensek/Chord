@@ -2,6 +2,7 @@ package chord.test;
 
 import chord.util.ComputeHash;
 import chord.util.ConvertHex;
+import chord.util.CreateIdentifier;
 
 import java.io.IOException;
 
@@ -13,24 +14,28 @@ public class IdentifierInput {
 
     private void printIDHash() throws IOException {
         String hashedID = ComputeHash.SHA1FromBytes(identifier.getBytes());
-//        System.out.println("Hashed ID: " + hashedID);
         byte[] hashByte = convertHex.convertHexToBytes(hashedID);
-//        for (byte b : hashByte) {
-//            System.out.print(b);
-//        }
-//        System.out.println("");
         int ID = java.nio.ByteBuffer.wrap(hashByte).getInt();
         short sixteenBit = (short) ((short)(ID & 0xffff) - ((ID & 0x8000) << 1));
-//        sixteenBit = (short) Math.abs(sixteenBit);
         if (sixteenBit <= 32767 && sixteenBit > -32768) {
-            int test = sixteenBit;
+            int test;
+            if (sixteenBit < 0) {
+                test = sixteenBit + 65535;
+            } else {
+                test = sixteenBit;
+            }
             System.out.println(test);
-            System.out.println(sixteenBit);
+//            System.out.println(sixteenBit);
         } else {
             System.out.println("NOK");
         }
 //        System.out.println("");
 //        System.out.println("final ID: " + ID);
+    }
+
+    private void useMethod() {
+        int testID = CreateIdentifier.createIdentifier(String.valueOf(System.currentTimeMillis()));
+        System.out.println(testID);
     }
 
     public static void main(String[] args) throws IOException {
@@ -43,7 +48,8 @@ public class IdentifierInput {
         while (true) {
             try {
                 identifier = String.valueOf(System.currentTimeMillis());
-                identifierInput.printIDHash();
+//                identifierInput.printIDHash();
+                identifierInput.useMethod();
                 Thread.sleep(100);
             } catch (InterruptedException e) {
                 e.printStackTrace();
