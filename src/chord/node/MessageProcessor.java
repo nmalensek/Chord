@@ -1,43 +1,56 @@
 package chord.node;
 
-import chord.messages.Collision;
-import chord.messages.DestinationNode;
-import chord.messages.FilePayload;
-import chord.messages.Lookup;
+import chord.messages.*;
 import chord.transport.TCPSender;
 
 import java.io.IOException;
 import java.net.Socket;
 import java.util.HashMap;
 
-public class MessageProcessor {
+class MessageProcessor {
 
     TCPSender sender = new TCPSender();
     private String host;
     private int port;
     private int ID;
+    private Peer parent;
+    NodeRecord self;
 
-    public MessageProcessor(String host, int port, int ID) {
+    MessageProcessor(String host, int port, int ID, Peer parent) throws IOException {
         this.host = host;
         this.port = port;
         this.ID = ID;
+        this.parent = parent;
+        self = new NodeRecord(host + ":" + port, ID, host + ":" + port);
     }
 
-    public void processRegistration() {
-
+    void processRegistration(NodeInformation information) throws IOException {
+        if (information.getSixteenBitID() != ID) { //not first node in the ring so find out where to go
+            Lookup findLocation = new Lookup();
+            findLocation.setRoutingPath(host + ":" + port + ",");
+            findLocation.setPayloadID(ID);
+            Socket randomNodeSocket = new Socket(information.getHostPort().split(":")[0],
+                    Integer.parseInt(information.getHostPort().split(":")[1]));
+            sender.sendToSpecificSocket(randomNodeSocket, findLocation.getBytes());
+        } else {
+            parent.setPredecessor(self);
+        }
     }
 
-    public void processLookup(Lookup lookupEvent, NodeRecord predecessor) throws IOException {
+    void processLookup(Lookup lookupEvent, NodeRecord predecessor) throws IOException {
         int payload = lookupEvent.getPayloadID();
         if (payload > predecessor.getIdentifier() && payload <= ID) {
-            DestinationNode thisNodeIsSink = new DestinationNode();
-            thisNodeIsSink.setHostPort(host + ":" + port);
-            String originatingNode = lookupEvent.getRoutingPath().split(",")[0];
-            String originatingHost = originatingNode.split(":")[0];
-            int originatingPort = Integer.parseInt(originatingNode.split(":")[1]);
-            Socket requestorSocket = new Socket(originatingHost, originatingPort);
-            sender.sendToSpecificSocket(requestorSocket, thisNodeIsSink.getBytes());
-            System.out.println("Hops: " + (lookupEvent.getNumHops() + 1));
+            sendDestinationMessage(lookupEvent, host + ":" + port);
+        } else if (parent.getPredecessor().getIdentifier() == ID) {
+            sendDestinationMessage(lookupEvent, host + ":" + port);
+        } else if (parent.getPredecessor().getIdentifier() == parent.getFingerTable().get(1).getIdentifier()) {
+            NodeRecord larger = ID > parent.getPredecessor().getIdentifier() ? self : parent.getPredecessor();
+            NodeRecord smaller = ID < parent.getPredecessor().getIdentifier() ? self : parent.getPredecessor();
+            if (payload > larger.getIdentifier() || payload < smaller.getIdentifier()) {
+                sendDestinationMessage(lookupEvent, smaller.getHost() + ":" + smaller.getPort());
+            } else if (smaller.getIdentifier() < payload && payload < larger.getIdentifier()) {
+                sendDestinationMessage(lookupEvent, larger.getHost() + ":" + larger.getPort());
+            }
         } else {
             //route message to appropriate node
             lookupEvent.setNumHops((lookupEvent.getNumHops() + 1));
@@ -46,7 +59,22 @@ public class MessageProcessor {
         }
     }
 
-    public void processPayload(FilePayload filePayload, HashMap<Integer, String> filesResponsibleFor) throws IOException {
+    void sendDestinationMessage(Lookup lookup, String destinationNodeHostPort) throws IOException {
+        DestinationNode thisNodeIsSink = new DestinationNode();
+        thisNodeIsSink.setHostPort(destinationNodeHostPort);
+        String originatingNode = lookup.getRoutingPath().split(",")[0];
+        String originatingHost = originatingNode.split(":")[0];
+        int originatingPort = Integer.parseInt(originatingNode.split(":")[1]);
+        Socket requestorSocket = new Socket(originatingHost, originatingPort);
+        sender.sendToSpecificSocket(requestorSocket, thisNodeIsSink.getBytes());
+        System.out.println("Hops: " + (lookup.getNumHops() + 1));
+    }
+
+    void processDestination(DestinationNode destinationNode) {
+        //a destination means that node's your successor, so send a message to update it and its predecessor
+    }
+
+    void processPayload(FilePayload filePayload, HashMap<Integer, String> filesResponsibleFor) throws IOException {
         if (filesResponsibleFor.get(filePayload.getFileID()) != null) {
             filePayload.writeFile(filePayload.getFileByteArray(), "/tmp/" + filePayload.getFileName());
             synchronized (filesResponsibleFor) {

@@ -1,4 +1,4 @@
-package chord.util;
+package chord.utilitythreads;
 
 import chord.node.NodeRecord;
 import chord.node.Peer;
@@ -34,6 +34,7 @@ public class DiagnosticPrinterThread extends Thread {
 
     private void updateFTCopy() {
         fingerTableCopy = owner.getFingerTable();
+        owner.setFingerTableModified(false);
     }
 
     private void printFingerTable() {
@@ -56,6 +57,7 @@ public class DiagnosticPrinterThread extends Thread {
 
     private void updateFilesCopy() {
         responsibleFilesCopy = owner.getFilesResponsibleFor();
+        owner.setFilesResponsibleForModified(false);
     }
 
     private void printResponsibleFiles() {

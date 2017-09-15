@@ -4,8 +4,8 @@ import chord.messages.*;
 import chord.transport.TCPSender;
 import chord.transport.TCPServerThread;
 import chord.util.CreateIdentifier;
-import chord.util.DiagnosticPrinterThread;
-import chord.util.QuerySuccessorThread;
+import chord.utilitythreads.DiagnosticPrinterThread;
+import chord.utilitythreads.QuerySuccessorThread;
 import chord.util.ShutdownHook;
 
 import java.io.IOException;
@@ -38,7 +38,7 @@ public class Peer implements Node {
         startThreads();
         setPort();
         connectToNetwork();
-        messageProcessor = new MessageProcessor(peerHost, peerPort, nodeIdentifier);
+        messageProcessor = new MessageProcessor(peerHost, peerPort, nodeIdentifier, this);
         constructInitialFingerTable();
     }
 
@@ -83,26 +83,15 @@ public class Peer implements Node {
     @Override
     public void onEvent(Event event, Socket destinationSocket) throws IOException {
         if (event instanceof NodeInformation) {
-            //figure out where to go!
             NodeInformation information = (NodeInformation) event;
-            if (information.getSixteenBitID() != nodeIdentifier) {
-                //not first node in the ring so there are things to do
-            }
+            messageProcessor.processRegistration(information);
             addShutDownHook();
         } else if (event instanceof Collision) {
-            //another node already has that id, get a new id and retry
             System.out.println("This node's ID already exists in the overlay. Please enter a new one:");
             promptForNewID();
             connectToNetwork();
-        } else if (event instanceof NodeLeaving) {
-            if (fingerTable.get(1).getIdentifier() == (((NodeLeaving) event).getSixteenBitID())) {
-                //successor left
-                fingerTable.remove(1); //TODO: re-make finger table instead of just remove
-            } else {
-                //predecessor left
-                predecessor = null;
-            }
-            //update finger table
+        } else if (event instanceof DestinationNode) {
+            messageProcessor.processDestination((DestinationNode) event);
         } else if (event instanceof Lookup) {
             messageProcessor.processLookup(((Lookup) event), predecessor);
         } else if (event instanceof FilePayload) {
@@ -114,6 +103,15 @@ public class Peer implements Node {
             if (queryResponseMessage.getPredecessorID() != nodeIdentifier) {
                 updateSuccessor(queryResponseMessage);
             }
+        } else if (event instanceof NodeLeaving) {
+            if (fingerTable.get(1).getIdentifier() == (((NodeLeaving) event).getSixteenBitID())) {
+                //successor left
+                fingerTable.remove(1); //TODO: re-make finger table instead of just remove
+            } else {
+                //predecessor left, find new predecessor
+                predecessor = null;
+            }
+            //update finger table
         }
     }
 
@@ -165,8 +163,16 @@ public class Peer implements Node {
         }
     }
 
+    public void setPredecessor(NodeRecord newPredecessor) {
+        synchronized (predecessor) {
+            this.predecessor = newPredecessor;
+        }
+    }
+
     public boolean isFingerTableModified() { return fingerTableModified.get(); }
     public boolean isFilesResponsibleForModified() { return filesResponsibleForModified.get(); }
+    public void setFingerTableModified(boolean newValue) { fingerTableModified.set(newValue);}
+    public void setFilesResponsibleForModified(boolean newValue) { filesResponsibleForModified.set(newValue); }
 
     @Override
     public void processText(String text) { }

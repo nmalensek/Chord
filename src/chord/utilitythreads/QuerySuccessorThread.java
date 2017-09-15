@@ -1,4 +1,4 @@
-package chord.util;
+package chord.utilitythreads;
 
 import chord.messages.Query;
 import chord.node.NodeRecord;

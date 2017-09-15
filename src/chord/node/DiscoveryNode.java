@@ -27,9 +27,9 @@ public class DiscoveryNode implements Node {
     }
 
     private synchronized void addNewNodeToOverlay(NodeRecord newNode) throws IOException {
-                registeredPeers.put(newNode.getIdentifier(), newNode);
-                randomNodes.add(newNode.getIdentifier());
-                checkForCollision(newNode);
+        checkForCollision(newNode);
+        registeredPeers.put(newNode.getIdentifier(), newNode);
+        randomNodes.add(newNode.getIdentifier());
     }
 
     private synchronized void checkForCollision(NodeRecord node) throws IOException {
@@ -37,8 +37,6 @@ public class DiscoveryNode implements Node {
         try {
             if (registeredPeers.get(node.getIdentifier()) == null) {
                 NodeRecord randomNode = randomNodes.size() == 0 ? node : chooseRandomNode();
-                registeredPeers.put(node.getIdentifier(), node);
-                randomNodes.add(node.getIdentifier());
 
                 NodeInformation messageWithRandomNode = prepareRandomNodeInfoMessage(randomNode);
                 sender.sendToSpecificSocket(newNodeSocket, messageWithRandomNode.getBytes());
@@ -51,7 +49,7 @@ public class DiscoveryNode implements Node {
         }
     }
 
-    private NodeInformation prepareRandomNodeInfoMessage(NodeRecord randomNode) {
+    private synchronized NodeInformation prepareRandomNodeInfoMessage(NodeRecord randomNode) {
         NodeInformation randomNodeInfo = new NodeInformation();
         randomNodeInfo.setSixteenBitID(randomNode.getIdentifier());
         randomNodeInfo.setHostPort(randomNode.getHost() + ":" + randomNode.getPort());
@@ -59,7 +57,7 @@ public class DiscoveryNode implements Node {
         return randomNodeInfo;
     }
 
-    private void respondToInquiry(Socket storeDataSocket) throws IOException {
+    private synchronized void respondToInquiry(Socket storeDataSocket) throws IOException {
             NodeRecord randomNode = chooseRandomNode();
             NodeInformation nodeToContact = prepareRandomNodeInfoMessage(randomNode);
             sender.sendToSpecificSocket(storeDataSocket, nodeToContact.getBytes());
@@ -84,7 +82,7 @@ public class DiscoveryNode implements Node {
                 " (ID: " + removedNode.getIdentifier() + ") has left the overlay.");
     }
 
-    private NodeRecord constructNewNode(Event event) throws IOException {
+    private synchronized NodeRecord constructNewNode(Event event) throws IOException {
         String hostPort = ((NodeInformation) event).getHostPort();
         int identifier = ((NodeInformation) event).getSixteenBitID();
         String nickname = ((NodeInformation) event).getNickname();

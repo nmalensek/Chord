@@ -4,7 +4,7 @@ import chord.messages.*;
 import chord.transport.TCPSender;
 import chord.transport.TCPServerThread;
 import chord.util.CreateIdentifier;
-import chord.util.TextInputThread;
+import chord.utilitythreads.TextInputThread;
 
 import java.io.File;
 import java.io.IOException;
@@ -75,11 +75,18 @@ public class StoreData implements Node {
                 try {
                     filePath = Paths.get(text.split("\\s")[1]);
                     file = new File(text.split("\\s")[1]);
-                    fileID = CreateIdentifier.createIdentifier(filePath.getFileName().toString());
+                    if (text.split("\\s")[2].equals("na")) {
+                        fileID = CreateIdentifier.createIdentifier(filePath.getFileName().toString());
+                    } else {
+                        fileID = Integer.parseInt(text.split("\\s")[2]);
+                        if (fileID < 0 || fileID > 65535) {
+                            throw new NumberFormatException();
+                        }
+                    }
                     StoreDataInquiry inquiry = new StoreDataInquiry();
                     inquiry.setSixteenBitID(fileID);
                     sender.sendToSpecificSocket(discoveryNodeSocket, inquiry.getBytes());
-                } catch (StringIndexOutOfBoundsException s) {
+                } catch (StringIndexOutOfBoundsException | NumberFormatException s) {
                     System.out.println("Could not generate ID from the supplied filename, please rename and try again");
                 }
                 break;
