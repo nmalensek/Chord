@@ -81,6 +81,13 @@ public final class EventFactory {
         return destinationNode;
     }
 
+    public static Event<UpdatePredecessor> updatePredecessorEvent(
+            byte[] marshalledBytes) throws IOException {
+        UpdatePredecessor updatePredecessor = new UpdatePredecessor();
+        updatePredecessor.readMessage(marshalledBytes);
+        return updatePredecessor;
+    }
+
     public static Event<FilePayload> filePayloadEvent(
             byte[] marshalledBytes) throws IOException {
         FilePayload filePayload = new FilePayload();

@@ -10,5 +10,6 @@ public interface Protocol {
     int FILE = 6;
     int QUERY = 7;
     int QUERY_RESPONSE = 8;
+    int UPDATE = 9;
     int EXIT_OVERLAY = 99;
 }

@@ -103,6 +103,8 @@ public class Peer implements Node {
             if (queryResponseMessage.getPredecessorID() != nodeIdentifier) {
                 updateSuccessor(queryResponseMessage);
             }
+        } else if (event instanceof UpdatePredecessor) {
+            messageProcessor.processPredecessorUpdate((UpdatePredecessor) event);
         } else if (event instanceof NodeLeaving) {
             if (fingerTable.get(1).getIdentifier() == (((NodeLeaving) event).getSixteenBitID())) {
                 //successor left
@@ -128,11 +130,11 @@ public class Peer implements Node {
                 new NodeRecord(queryResponse.getPredecessorHostPort(),
                         queryResponse.getPredecessorID(),
                         queryResponse.getPredecessorNickname());
-        fingerTable.put(0, updatedSuccessor);
+        fingerTable.put(1, updatedSuccessor);
         fingerTableModified.set(true);
         Query queryNewSuccessor = new Query(); //check if this node is successor to new node
         sender.sendToSpecificSocket(
-                new Socket(fingerTable.get(0).getHost(), fingerTable.get(0).getPort()), queryNewSuccessor.getBytes());
+                new Socket(fingerTable.get(1).getHost(), fingerTable.get(1).getPort()), queryNewSuccessor.getBytes());
     }
 
     private void promptForNewID() {
@@ -175,7 +177,25 @@ public class Peer implements Node {
     public void setFilesResponsibleForModified(boolean newValue) { filesResponsibleForModified.set(newValue); }
 
     @Override
-    public void processText(String text) { }
+    public void processText(String text) {
+        switch (text) {
+            case "diagnostic":
+                System.out.println("Finger table at this node:");
+                for (int key : fingerTable.keySet()) {
+                    System.out.println(key + "\t" + fingerTable.get(key));
+                }
+                System.out.println("\nSuccessor and predecessor:");
+                System.out.println("Successor: " + fingerTable.get(1).getHost() + "(" + fingerTable.get(1).getIdentifier() + ")");
+                System.out.println("Predecessor: " + predecessor.getHost() + "(" + predecessor.getIdentifier() + ")");
+                System.out.println("\nFiles managed by this node:");
+                for (int key : filesResponsibleFor.keySet()) {
+                    System.out.println(key + "\t" + filesResponsibleFor.get(key));
+                }
+                break;
+            default:
+                System.out.println("Valid commands are: diagnostic");
+        }
+    }
 
     public static void main(String[] args) throws UnknownHostException {
         peerHost = Inet4Address.getLocalHost().getHostName();

@@ -49,7 +49,7 @@ public class StoreData implements Node {
 
     @Override
     public void onEvent(Event event, Socket destinationSocket) throws IOException {
-        if (event instanceof NodeInformation) {
+        if (event instanceof NodeInformation) { //gets random peer from DiscoveryNode to send lookup message
             Lookup lookup = new Lookup();
             lookup.setPayloadID(fileID);
             lookup.setRoutingPath(thisNodeHost + ":" + thisNodePort + ",");
@@ -59,6 +59,8 @@ public class StoreData implements Node {
             file.setFileName(filePath.getFileName().toString());
             file.setFileToTransfer(new File(filePath.toString()));
             file.setSendingNodeHostPort(thisNodeHost + ":" + thisNodePort);
+            System.out.println("Sending file to " + ((DestinationNode) event).getHostPort() + "\tID: "
+                    + ((DestinationNode) event).getDestinationID());
 
             TCPSender sender = new TCPSender();
             sender.sendToSpecificSocket(destinationSocket, file.getBytes());

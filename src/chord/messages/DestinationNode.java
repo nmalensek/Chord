@@ -5,14 +5,22 @@ import java.io.*;
 public class DestinationNode implements Protocol, Event {
 
     private int messageType = DESTINATION;
+    private int destinationID;
     private String hostPort;
+    private String destinationNickname;
 
     public DestinationNode getType() {
         return this;
     }
 
     public String getHostPort() { return hostPort; }
-    public void setHostPort(String hostPort) { this.hostPort = hostPort; }{}
+    public void setHostPort(String hostPort) { this.hostPort = hostPort; }
+
+    public int getDestinationID() { return destinationID; }
+    public void setDestinationID(int destinationID) { this.destinationID = destinationID; }
+
+    public String getDestinationNickname() { return destinationNickname; }
+    public void setDestinationNickname(String destinationNickname) { this.destinationNickname = destinationNickname; }
 
     @Override
     public int getMessageType() {
@@ -27,11 +35,17 @@ public class DestinationNode implements Protocol, Event {
                 new DataOutputStream(new BufferedOutputStream(byteArrayOutputStream));
 
         dataOutputStream.writeInt(messageType);
+        dataOutputStream.writeInt(destinationID);
 
         byte[] hostPortBytes = hostPort.getBytes();
         int hostPortLength = hostPortBytes.length;
         dataOutputStream.writeInt(hostPortLength);
         dataOutputStream.write(hostPortBytes);
+
+        byte[] destNickname = destinationNickname.getBytes();
+        int nickLength = destNickname.length;
+        dataOutputStream.writeInt(nickLength);
+        dataOutputStream.write(destNickname);
 
         dataOutputStream.flush();
         marshalledBytes = byteArrayOutputStream.toByteArray();
@@ -49,12 +63,19 @@ public class DestinationNode implements Protocol, Event {
                 new DataInputStream(new BufferedInputStream(byteArrayInputStream));
 
         messageType = dataInputStream.readInt();
+        destinationID = dataInputStream.readInt();
 
         int hostPortLength = dataInputStream.readInt();
         byte[] hostPortBytes = new byte[hostPortLength];
         dataInputStream.readFully(hostPortBytes);
 
         hostPort = new String(hostPortBytes);
+
+        int nicknameLength = dataInputStream.readInt();
+        byte[] nicknameBytes = new byte[nicknameLength];
+        dataInputStream.readFully(nicknameBytes);
+
+        destinationNickname = new String(nicknameBytes);
 
         byteArrayInputStream.close();
         dataInputStream.close();

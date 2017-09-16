@@ -25,6 +25,8 @@ public class ShutdownHook extends Thread {
         this.discoveryNodePort = discoveryNodePort;
     }
 
+    //TODO transfer files to successor!
+
     @Override
     public void run() {
         NodeLeaving leaving = new NodeLeaving();
