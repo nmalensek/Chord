@@ -39,23 +39,37 @@ class MessageProcessor {
 
     void processLookup(Lookup lookupEvent, NodeRecord predecessor) throws IOException {
         int payload = lookupEvent.getPayloadID();
-        if (payload > predecessor.getIdentifier() && payload <= ID) {
+        int predecessorID = predecessor.getIdentifier();
+        NodeRecord successor = parent.getFingerTable().get(1);
+        if (payload > predecessorID && payload <= ID) { //normal message storage condition
             sendDestinationMessage(lookupEvent, host + ":" + port);
-        } else if (parent.getPredecessor().getIdentifier() == ID) {
+        } else if (predecessorID == ID) { //second node joins overlay
             sendDestinationMessage(lookupEvent, host + ":" + port);
-        } else if (parent.getPredecessor().getIdentifier() == parent.getFingerTable().get(1).getIdentifier()) {
-            NodeRecord larger = ID > parent.getPredecessor().getIdentifier() ? self : parent.getPredecessor();
-            NodeRecord smaller = ID < parent.getPredecessor().getIdentifier() ? self : parent.getPredecessor();
+        } else if (predecessorID == successor.getIdentifier()) { //third node joins overlay
+            NodeRecord larger = ID > predecessorID ? self : predecessor;
+            NodeRecord smaller = ID < predecessorID ? self : predecessor;
             if (payload > larger.getIdentifier() || payload < smaller.getIdentifier()) {
                 sendDestinationMessage(lookupEvent, smaller.getHost() + ":" + smaller.getPort());
             } else if (smaller.getIdentifier() < payload && payload < larger.getIdentifier()) {
                 sendDestinationMessage(lookupEvent, larger.getHost() + ":" + larger.getPort());
             }
+        } else if (successor.getIdentifier() > payload && predecessorID < payload) { //Successor is largest, send to there
+            forwardLookup(lookupEvent, successor);
         } else {
-            //route message to appropriate node
-            lookupEvent.setNumHops((lookupEvent.getNumHops() + 1));
-            System.out.println("Hops: " + lookupEvent.getNumHops());
-            //TODO route message using finger table
+            HashMap<Integer, NodeRecord> parentFingerTable = parent.getFingerTable();
+            for (int key : parentFingerTable.keySet()) {
+                    NodeRecord currentRow = parentFingerTable.get(key);
+                    NodeRecord nextRow = parentFingerTable.get(key + 1);
+                    if (nextRow == null) {
+                        //you're at the last FT entry, forward to currentRow
+                        forwardLookup(lookupEvent, currentRow);
+                        break;
+                    } else if (currentRow.getIdentifier() <= payload && payload < nextRow.getIdentifier()) {
+                        //currentRow is largest FT row that's still less than k, send to there
+                        forwardLookup(lookupEvent, currentRow);
+                        break;
+                    }
+            }
         }
     }
 
@@ -67,7 +81,16 @@ class MessageProcessor {
         int originatingPort = Integer.parseInt(originatingNode.split(":")[1]);
         Socket requestorSocket = new Socket(originatingHost, originatingPort);
         sender.sendToSpecificSocket(requestorSocket, thisNodeIsSink.getBytes());
+        System.out.println("Routing: " + lookup.getRoutingPath());
         System.out.println("Hops: " + (lookup.getNumHops() + 1));
+    }
+
+    void forwardLookup(Lookup lookup, NodeRecord forwardTarget) throws IOException {
+        lookup.setRoutingPath(lookup.getRoutingPath() + "," + host + ":" + port);
+        lookup.setNumHops((lookup.getNumHops() + 1));
+        Socket successorSocket = new Socket(forwardTarget.getHost(), forwardTarget.getPort());
+        sender.sendToSpecificSocket(successorSocket, lookup.getBytes());
+        System.out.println("Hops: " + lookup.getNumHops() + "\tfor id: " + lookup.getPayloadID());
     }
 
     void processDestination(DestinationNode destinationNode) {
@@ -89,5 +112,4 @@ class MessageProcessor {
             fileOwnerSocket.close();
         }
     }
-
 }
