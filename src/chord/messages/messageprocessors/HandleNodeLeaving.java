@@ -34,7 +34,7 @@ public class HandleNodeLeaving {
         String[] successorInfo = (leavingMessage.getSuccessorInfo().split(":"));
         NodeRecord newSuccessor = new NodeRecord(
                 successorInfo[0] + ":" + successorInfo[1],
-                Integer.parseInt(successorInfo[3]),
+                Integer.parseInt(successorInfo[2]),
                 successorInfo[0],
                 true
         );
@@ -48,7 +48,7 @@ public class HandleNodeLeaving {
         String[] predecessorInfo = (leavingMessage.getSuccessorInfo().split(":"));
         NodeRecord newPredecessor = new NodeRecord(
                 predecessorInfo[0] + ":" + predecessorInfo[1],
-                Integer.parseInt(predecessorInfo[3]),
+                Integer.parseInt(predecessorInfo[2]),
                 predecessorInfo[0],
                 true
         );

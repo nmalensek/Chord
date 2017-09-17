@@ -112,7 +112,7 @@ public class Peer implements Node {
                     updateSuccessor(queryResponseMessage);
                 }
             } else if (event instanceof UpdatePredecessor) {
-                messageProcessor.processPredecessorUpdate((UpdatePredecessor) event);
+                messageProcessor.processPredecessorUpdate((UpdatePredecessor) event, filesResponsibleFor);
             } else if (event instanceof NodeLeaving) {
                 if (fingerTable.get(1).getIdentifier() == (((NodeLeaving) event).getSixteenBitID())) { //successor left
                     handleNodeLeaving.processSuccessorLeaving((NodeLeaving) event);
@@ -122,9 +122,8 @@ public class Peer implements Node {
             } else if (event instanceof SuccessorInformation) {
                 messageProcessor.processSuccessorInformation((SuccessorInformation) event);
             } else if (event instanceof AskForSuccessor) {
-                messageProcessor.createSuccessorInformation(fingerTable.get(1), destinationSocket);
-                AskForSuccessor askForSuccessor = new AskForSuccessor(); //someone's updating their finger table, update yours too
-                sender.sendToSpecificSocket(fingerTable.get(1).getNodeSocket(), askForSuccessor.getBytes());
+                messageProcessor.sendSuccessorInformation(fingerTable.get(1), destinationSocket);
+                messageProcessor.checkIfUnknownNode((AskForSuccessor) event);
             }
         } catch (IOException e) {
             handleNodeLeaving.removeDeadNodeAndUpdateFT(destinationSocket);

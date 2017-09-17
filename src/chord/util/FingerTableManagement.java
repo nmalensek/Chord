@@ -19,7 +19,7 @@ public class FingerTableManagement {
         return map;
     }
 
-    public void updateFingerTable(int ID, HashMap<Integer, NodeRecord> fingerTable, HashMap<Integer, NodeRecord> knownNodes) {
+    public synchronized void updateFingerTable(int ID, HashMap<Integer, NodeRecord> fingerTable, HashMap<Integer, NodeRecord> knownNodes) {
         for (int i = 1; i < 17; i++) {
             int k = ID + (powersOfTwo.get(i)); //get the row value
             if (k >= 32) {

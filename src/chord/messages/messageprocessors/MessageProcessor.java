@@ -6,6 +6,7 @@ import chord.node.Peer;
 import chord.transport.TCPSender;
 import chord.util.FingerTableManagement;
 
+import java.io.File;
 import java.io.IOException;
 import java.net.Socket;
 import java.util.HashMap;
@@ -122,22 +123,38 @@ public class MessageProcessor {
         knownNodes.putIfAbsent(successorID, successorNode);
     }
 
-    public void processPredecessorUpdate(UpdatePredecessor updatePredecessor) throws IOException {
-        String predecessorHostPort = updatePredecessor.getPredecessorHostPort();
-        int predecessorID = updatePredecessor.getPredecessorID();
-        String predecessorNickname = updatePredecessor.getPredecessorNickname();
+    public void processPredecessorUpdate(UpdatePredecessor updatePredecessor, HashMap<Integer, String> fileHashMap) throws IOException {
+        String newPredecessorHostPort = updatePredecessor.getPredecessorHostPort();
+        int newPredecessorID = updatePredecessor.getPredecessorID();
+        String newPredecessorNickname = updatePredecessor.getPredecessorNickname();
         NodeRecord newPredecessor =
-                new NodeRecord(predecessorHostPort, predecessorID, predecessorNickname, true);
+                new NodeRecord(newPredecessorHostPort, newPredecessorID, newPredecessorNickname, true);
         parent.setPredecessor(newPredecessor);
-        knownNodes.putIfAbsent(predecessorID, newPredecessor);
+        knownNodes.putIfAbsent(newPredecessorID, newPredecessor);
+
         fingerTableManagement.updateFingerTable(ID, parent.getFingerTable(), knownNodes);
+        parent.setFingerTableModified(true);
 
         NodeRecord successor = parent.getFingerTable().get(1); //tell new predecessor about your successor
-        createSuccessorInformation(successor, newPredecessor.getNodeSocket());
-        //TODO transfer data items as necessary!
+        sendSuccessorInformation(successor, newPredecessor.getNodeSocket());
+
+        for (int fileKey : fileHashMap.keySet()) {
+            if (fileKey <= newPredecessorID) {
+                FilePayload file = new FilePayload();
+                file.setFileID(fileKey);
+                file.setFileName(fileHashMap.get(fileKey).substring(4, fileHashMap.get(fileKey).length() + 1));
+                file.setFileToTransfer(new File(fileHashMap.get(fileKey)));
+                System.out.println("Sending file " + fileKey + " to " + newPredecessorHostPort + "\tID: "
+                        + newPredecessorID);
+                TCPSender sender = new TCPSender();
+                sender.sendToSpecificSocket(newPredecessor.getNodeSocket(), file.getBytes());
+            }
+        }
+        parent.setFilesResponsibleForModified(true);
+
     }
 
-    public void createSuccessorInformation(NodeRecord successor, Socket askerSocket) throws IOException {
+    public void sendSuccessorInformation(NodeRecord successor, Socket askerSocket) throws IOException {
         SuccessorInformation successorInformation = new SuccessorInformation();
         successorInformation.setSuccessorHostPort(successor.getHost() + ":" + successor.getPort());
         successorInformation.setSuccessorID(successor.getIdentifier());
@@ -159,8 +176,20 @@ public class MessageProcessor {
             knownNodes.putIfAbsent(successorID, successorNode);
 
             AskForSuccessor askForSuccessor = new AskForSuccessor();
+            askForSuccessor.setOriginatorInformation(host + ":" + port + ":" + ID);
             sender.sendToSpecificSocket(successorNode.getNodeSocket(), askForSuccessor.getBytes());
         } else {
+            fingerTableManagement.updateFingerTable(ID, parent.getFingerTable(), knownNodes);
+            parent.setFingerTableModified(true);
+        }
+    }
+
+    public void checkIfUnknownNode(AskForSuccessor requestForSuccessor) throws IOException {
+        String[] requestOriginator = requestForSuccessor.getOriginatorInformation().split(":");
+        int originatorID = Integer.parseInt(requestOriginator[2]);
+        String originatorHostPort = requestOriginator[0] + ":" + requestOriginator[1];
+        if (knownNodes.get(originatorID) == null) {
+            knownNodes.put(originatorID, new NodeRecord(originatorHostPort, originatorID, requestOriginator[0],true));
             fingerTableManagement.updateFingerTable(ID, parent.getFingerTable(), knownNodes);
             parent.setFingerTableModified(true);
         }
@@ -178,7 +207,6 @@ public class MessageProcessor {
             int senderPort = Integer.parseInt(filePayload.getSendingNodeHostPort().split(":")[1]);
             Socket fileOwnerSocket = new Socket(senderHost, senderPort);
             sender.sendToSpecificSocket(fileOwnerSocket, collision.getBytes());
-            fileOwnerSocket.close();
         }
     }
 }
