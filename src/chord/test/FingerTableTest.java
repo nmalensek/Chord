@@ -5,6 +5,7 @@ import chord.util.CreateIdentifier;
 
 import java.io.IOException;
 import java.net.Inet4Address;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -22,17 +23,17 @@ public class FingerTableTest {
                 + ":" + 12345, identifier, Inet4Address.getLocalHost().getHostName(), false);
         for (int i = 1; i < 17; i++) {
             fingerTable.put(i, thisNode);
-            System.out.println(i + "\t" + thisNode.getIdentifier());
+//            System.out.println(i + "\t" + thisNode.getIdentifier());
         }
     }
 
     public HashMap<Integer, Integer> returnSquares() {
         HashMap<Integer, Integer> map = new HashMap<>();
-        for (int i = 1; i < 17; i++) {
+        for (int i = 1; i < 5; i++) {
             Double max = Math.pow(2, (i-1));
             int maxID = max.intValue();
             map.put(i, maxID);
-            System.out.println(i + "\t" + maxID);
+//            System.out.println(i + "\t" + maxID);
         }
         return map;
     }
@@ -41,8 +42,53 @@ public class FingerTableTest {
 
     }
 
-    private void constructExampleFingerTable() {
+    private void constructExampleFingerTable(int[] testNodes, int testID) { //test with 4-bit table
+        HashMap<Integer, Integer> resultMap = new HashMap<>();
+        ArrayList<Integer> knownNodes = new ArrayList<>();
 
+        for (int i : testNodes) {
+            knownNodes.add(i);
+        }
+
+        HashMap<Integer, Integer> twoMap = new HashMap<>(returnSquares());
+
+        for (int i = 1; i < 5; i++) { //for every row in the FT
+            int k = testID + (twoMap.get(i)); //get the row value
+            if (k >= 16) {
+                k = k % 16;
+            }
+            int smallestID = 65535;
+            if (knownNodes.contains(k)) {
+                resultMap.put(i, k);
+            } else {
+                for (int nodeID : knownNodes) { //get the smallest value >= k
+                    if (nodeID == 4 && k > testID) { //simulating storing at successor
+                        resultMap.put(i, nodeID);
+                        break;
+                    } else {
+                        for (int n : knownNodes) {
+                            if (n > k && n < smallestID) {
+                                smallestID = n;
+                            }
+                        }
+                        resultMap.put(i, smallestID);
+                    }
+                }
+            }
+        }
+
+        System.out.println("Results:");
+        for (int row : resultMap.keySet()) {
+            System.out.println(row + "\t" + resultMap.get(row));
+        }
+    }
+
+    int[] testArray = {
+      8, 11, 14
+    };
+
+    private void testFingerTable() {
+        constructExampleFingerTable(testArray, 4);
     }
 
     private void comparisonTest() {
@@ -71,9 +117,10 @@ public class FingerTableTest {
         try {
             fingerTableTest.constructInitialFingerTable();
 //            fingerTableTest.returnSquares();
+            fingerTableTest.testFingerTable();
             while (true) {
                 Thread.sleep(300);
-                fingerTableTest.comparisonTest();
+//                fingerTableTest.comparisonTest();
             }
         } catch (IOException e) {
             e.printStackTrace();

@@ -4,9 +4,7 @@ import java.util.HashMap;
 
 public class FingerTableManagement {
 
-    private HashMap<Integer, Integer> squaresMap = new HashMap<>(returnSquares());
-
-    public HashMap<Integer, Integer> returnSquares() {
+    public static HashMap<Integer, Integer> returnSquares() {
         HashMap<Integer, Integer> map = new HashMap<>();
         for (int i = 1; i < 17; i++) {
             Double maxDouble = Math.pow(2, (i-1));

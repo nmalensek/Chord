@@ -2,6 +2,7 @@ package chord.node;
 
 import chord.messages.*;
 import chord.transport.TCPSender;
+import chord.util.FingerTableManagement;
 
 import java.io.IOException;
 import java.net.Socket;
@@ -17,6 +18,7 @@ class MessageProcessor {
     private Peer parent;
     private NodeRecord self;
     private ArrayList<NodeRecord> knownNodes;
+    private HashMap<Integer, Integer> powersOfTwo = new HashMap<>(FingerTableManagement.returnSquares());
 
     MessageProcessor(String host, int port, int ID, Peer parent, ArrayList<NodeRecord> knownNodes) throws IOException {
         this.host = host;
@@ -163,7 +165,7 @@ class MessageProcessor {
         } else {
             parent.getFingerTable();
             for (int i = 2; i < 17; i++) { //skip successor row
-
+                int maxRowValue = ID + powersOfTwo.get(i);
             }
             for (NodeRecord otherNode : knownNodes) {
 
