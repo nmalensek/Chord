@@ -12,6 +12,7 @@ import java.io.IOException;
 import java.net.Inet4Address;
 import java.net.Socket;
 import java.net.UnknownHostException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Scanner;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -31,6 +32,7 @@ public class Peer implements Node {
     private MessageProcessor messageProcessor;
     private final HashMap<Integer, NodeRecord> fingerTable = new HashMap<>();
     private final HashMap<Integer, String> filesResponsibleFor = new HashMap<>();
+    private ArrayList<NodeRecord> knownNodes = new ArrayList<>();
     private AtomicBoolean fingerTableModified = new AtomicBoolean();
     private AtomicBoolean filesResponsibleForModified = new AtomicBoolean();
 
@@ -38,7 +40,7 @@ public class Peer implements Node {
         startThreads();
         setPort();
         connectToNetwork();
-        messageProcessor = new MessageProcessor(peerHost, peerPort, nodeIdentifier, this);
+        messageProcessor = new MessageProcessor(peerHost, peerPort, nodeIdentifier, this, knownNodes);
         constructInitialFingerTable();
     }
 
@@ -68,7 +70,8 @@ public class Peer implements Node {
     }
 
     private void constructInitialFingerTable() throws IOException {
-        NodeRecord thisNode = new NodeRecord(peerHost + ":" + peerPort, nodeIdentifier, Inet4Address.getLocalHost().getHostName());
+        NodeRecord thisNode = new NodeRecord(peerHost + ":" + peerPort,
+                nodeIdentifier, Inet4Address.getLocalHost().getHostName(), false);
         for (int i = 1; i < 17; i++) { //16-bit ID space, so all nodes have 16 FT entries.
             fingerTable.put(i, thisNode);
         }
@@ -92,6 +95,7 @@ public class Peer implements Node {
             connectToNetwork();
         } else if (event instanceof DestinationNode) {
             messageProcessor.processDestination((DestinationNode) event);
+            //create fingerTable
         } else if (event instanceof Lookup) {
             messageProcessor.processLookup(((Lookup) event), predecessor);
         } else if (event instanceof FilePayload) {
@@ -114,7 +118,15 @@ public class Peer implements Node {
                 predecessor = null;
             }
             //update finger table
+        } else if (event instanceof SuccessorInformation) {
+            messageProcessor.processSuccessorInformation((SuccessorInformation) event);
+        } else if (event instanceof AskForSuccessor) {
+            messageProcessor.createSuccessorInformation(fingerTable.get(1), destinationSocket);
         }
+    }
+
+    private void createFingertable() {
+
     }
 
     private byte[] writeQueryResponse() throws IOException {
@@ -129,7 +141,7 @@ public class Peer implements Node {
         NodeRecord updatedSuccessor =
                 new NodeRecord(queryResponse.getPredecessorHostPort(),
                         queryResponse.getPredecessorID(),
-                        queryResponse.getPredecessorNickname());
+                        queryResponse.getPredecessorNickname(), true);
         fingerTable.put(1, updatedSuccessor);
         fingerTableModified.set(true);
         Query queryNewSuccessor = new Query(); //check if this node is successor to new node

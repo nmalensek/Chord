@@ -87,7 +87,7 @@ public class DiscoveryNode implements Node {
         int identifier = ((NodeInformation) event).getSixteenBitID();
         String nickname = ((NodeInformation) event).getNickname();
 
-        return new NodeRecord(hostPort, identifier, nickname);
+        return new NodeRecord(hostPort, identifier, nickname, true);
     }
 
     /**

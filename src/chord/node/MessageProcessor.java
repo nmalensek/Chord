@@ -5,6 +5,7 @@ import chord.transport.TCPSender;
 
 import java.io.IOException;
 import java.net.Socket;
+import java.util.ArrayList;
 import java.util.HashMap;
 
 class MessageProcessor {
@@ -15,13 +16,16 @@ class MessageProcessor {
     private int ID;
     private Peer parent;
     private NodeRecord self;
+    private ArrayList<NodeRecord> knownNodes;
 
-    MessageProcessor(String host, int port, int ID, Peer parent) throws IOException {
+    MessageProcessor(String host, int port, int ID, Peer parent, ArrayList<NodeRecord> knownNodes) throws IOException {
         this.host = host;
         this.port = port;
         this.ID = ID;
         this.parent = parent;
-        self = new NodeRecord(host + ":" + port, ID, host + ":" + port);
+        this.knownNodes = knownNodes;
+        self = new NodeRecord(host + ":" + port, ID, host, false);
+        knownNodes.add(self);
     }
 
     void processRegistration(NodeInformation information) throws IOException {
@@ -32,6 +36,10 @@ class MessageProcessor {
             Socket randomNodeSocket = new Socket(information.getHostPort().split(":")[0],
                     Integer.parseInt(information.getHostPort().split(":")[1]));
             sender.sendToSpecificSocket(randomNodeSocket, findLocation.getBytes());
+            knownNodes.add(
+                    new NodeRecord(information.getHostPort(),
+                            information.getSixteenBitID(),
+                            information.getNickname(), true));
         } else {
             parent.setPredecessor(self);
         }
@@ -94,27 +102,73 @@ class MessageProcessor {
     }
 
     void processDestination(DestinationNode destinationNode) throws IOException {
-        //a destination means that node's your successor, so set successor and send a message to update its predecessor
+        //a destination means that node's your successor, so set successor
         String successorHostPort = destinationNode.getHostPort();
         int successorID = destinationNode.getDestinationID();
         String successorNickname = destinationNode.getDestinationNickname();
-        NodeRecord successorNode = new NodeRecord(successorHostPort, successorID, successorNickname);
+        NodeRecord successorNode = new NodeRecord(successorHostPort, successorID, successorNickname, true);
         parent.getFingerTable().put(1, successorNode);
 
-        UpdatePredecessor updatePredecessor = new UpdatePredecessor();
+        //TODO Add successor's predecessor information to destination message
+
+        UpdatePredecessor updatePredecessor = new UpdatePredecessor(); //tell successor to update its predecessor
         updatePredecessor.setPredecessorID(ID);
         updatePredecessor.setPredecessorHostPort(host + ":" + port);
         updatePredecessor.setPredecessorNickname(host);
         sender.sendToSpecificSocket(successorNode.getNodeSocket(), updatePredecessor.getBytes());
+
+        if (!knownNodes.contains(successorNode)) {
+            knownNodes.add(successorNode);
+        }
     }
 
     void processPredecessorUpdate(UpdatePredecessor updatePredecessor) throws IOException {
         String predecessorHostPort = updatePredecessor.getPredecessorHostPort();
         int predecessorID = updatePredecessor.getPredecessorID();
         String predecessorNickname = updatePredecessor.getPredecessorNickname();
-        NodeRecord newPredecessor = new NodeRecord(predecessorHostPort, predecessorID, predecessorNickname);
+        NodeRecord newPredecessor =
+                new NodeRecord(predecessorHostPort, predecessorID, predecessorNickname, true);
         parent.setPredecessor(newPredecessor);
+
+        NodeRecord successor = parent.getFingerTable().get(1); //tell new predecessor about your successor
+        createSuccessorInformation(successor, newPredecessor.getNodeSocket());
         //TODO transfer data items as necessary!
+    }
+
+    void createSuccessorInformation(NodeRecord successor, Socket askerSocket) throws IOException {
+        SuccessorInformation successorInformation = new SuccessorInformation();
+        successorInformation.setSuccessorHostPort(successor.getHost() + ":" + successor.getPort());
+        successorInformation.setSuccessorID(successor.getIdentifier());
+        successorInformation.setSuccessorNickname(successor.getNickname());
+        sender.sendToSpecificSocket(askerSocket, successorInformation.getBytes());
+    }
+
+    void processSuccessorInformation(SuccessorInformation successorInformation) throws IOException {
+        String successorHostPort = successorInformation.getSuccessorHostPort();
+
+        if (!successorHostPort.split(":")[0].equals(host) &&
+                Integer.parseInt(successorHostPort.split(":")[1]) != port) { //stop if node's successor is this node
+
+            int successorID = successorInformation.getSuccessorID();
+            String successorNickname = successorInformation.getSuccessorNickname();
+
+            NodeRecord successorNode = new NodeRecord(successorHostPort, successorID, successorNickname, true);
+
+            if (!knownNodes.contains(successorNode)) {
+                knownNodes.add(successorNode);
+            }
+
+            AskForSuccessor askForSuccessor = new AskForSuccessor();
+            sender.sendToSpecificSocket(successorNode.getNodeSocket(), askForSuccessor.getBytes());
+        } else {
+            parent.getFingerTable();
+            for (int i = 2; i < 17; i++) { //skip successor row
+
+            }
+            for (NodeRecord otherNode : knownNodes) {
+
+            }
+        }
     }
 
     void processPayload(FilePayload filePayload, HashMap<Integer, String> filesResponsibleFor) throws IOException {

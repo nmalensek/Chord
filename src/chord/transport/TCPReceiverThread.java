@@ -109,6 +109,16 @@ public class TCPReceiverThread extends Thread implements Protocol {
                         eventFactory.updatePredecessorEvent(marshalledBytes);
                 node.onEvent(updatePredecessorEvent, communicationSocket);
                 break;
+            case ASK_FOR_SUCCESSOR:
+                Event<AskForSuccessor> askForSuccessorEvent =
+                        eventFactory.askForSuccessorEvent(marshalledBytes);
+                node.onEvent(askForSuccessorEvent, communicationSocket);
+                break;
+            case SUCCESSOR_INFO:
+                Event<SuccessorInformation> successorInformationEvent =
+                        eventFactory.successorInformationEvent(marshalledBytes);
+                node.onEvent(successorInformationEvent, communicationSocket);
+                break;
             case EXIT_OVERLAY:
                 Event<NodeLeaving> nodeLeavingEvent =
                         eventFactory.nodeLeavingEvent(marshalledBytes);

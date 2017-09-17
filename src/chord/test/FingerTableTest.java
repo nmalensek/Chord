@@ -19,11 +19,22 @@ public class FingerTableTest {
 
     private void constructInitialFingerTable() throws IOException {
         NodeRecord thisNode = new NodeRecord(Inet4Address.getLocalHost().getHostName()
-                + ":" + 12345, identifier, Inet4Address.getLocalHost().getHostName());
+                + ":" + 12345, identifier, Inet4Address.getLocalHost().getHostName(), false);
         for (int i = 1; i < 17; i++) {
             fingerTable.put(i, thisNode);
             System.out.println(i + "\t" + thisNode.getIdentifier());
         }
+    }
+
+    public HashMap<Integer, Integer> returnSquares() {
+        HashMap<Integer, Integer> map = new HashMap<>();
+        for (int i = 1; i < 17; i++) {
+            Double max = Math.pow(2, (i-1));
+            int maxID = max.intValue();
+            map.put(i, maxID);
+            System.out.println(i + "\t" + maxID);
+        }
+        return map;
     }
 
     private void processLookupLogicTest() {
@@ -59,6 +70,7 @@ public class FingerTableTest {
         FingerTableTest fingerTableTest = new FingerTableTest();
         try {
             fingerTableTest.constructInitialFingerTable();
+//            fingerTableTest.returnSquares();
             while (true) {
                 Thread.sleep(300);
                 fingerTableTest.comparisonTest();

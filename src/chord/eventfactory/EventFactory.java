@@ -88,6 +88,20 @@ public final class EventFactory {
         return updatePredecessor;
     }
 
+    public static Event<AskForSuccessor> askForSuccessorEvent(
+            byte[] marshalledBytes) throws IOException {
+        AskForSuccessor askForSuccessor = new AskForSuccessor();
+        askForSuccessor.readMessage(marshalledBytes);
+        return askForSuccessor;
+    }
+
+    public static Event<SuccessorInformation> successorInformationEvent(
+            byte[] marshalledBytes) throws IOException {
+        SuccessorInformation successorInformation = new SuccessorInformation();
+        successorInformation.readMessage(marshalledBytes);
+        return successorInformation;
+    }
+
     public static Event<FilePayload> filePayloadEvent(
             byte[] marshalledBytes) throws IOException {
         FilePayload filePayload = new FilePayload();

@@ -11,5 +11,7 @@ public interface Protocol {
     int QUERY = 7;
     int QUERY_RESPONSE = 8;
     int UPDATE = 9;
+    int ASK_FOR_SUCCESSOR = 10;
+    int SUCCESSOR_INFO = 11;
     int EXIT_OVERLAY = 99;
 }

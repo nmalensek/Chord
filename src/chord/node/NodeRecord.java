@@ -10,12 +10,14 @@ public class NodeRecord {
     private String nickname;
     private Socket nodeSocket;
 
-    public NodeRecord(String hostPort, int identifier, String nickname) throws IOException {
+    public NodeRecord(String hostPort, int identifier, String nickname, boolean createASocket) throws IOException {
         this.host = hostPort.split(":")[0];
         this.port = Integer.parseInt(hostPort.split(":")[1]);
         this.identifier = identifier;
         this.nickname = nickname;
-        nodeSocket = new Socket(hostPort.split(":")[0], Integer.parseInt(hostPort.split(":")[1]));
+        if (createASocket) {
+            nodeSocket = new Socket(hostPort.split(":")[0], Integer.parseInt(hostPort.split(":")[1]));
+        }
     }
 
     public String getHost() {
