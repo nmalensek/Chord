@@ -33,19 +33,14 @@ public class DiscoveryNode implements Node {
     }
 
     private synchronized void checkForCollision(NodeRecord node) throws IOException {
-        Socket newNodeSocket = new Socket(node.getHost(), node.getPort());
-        try {
-            if (registeredPeers.get(node.getIdentifier()) == null) {
-                NodeRecord randomNode = randomNodes.size() == 0 ? node : chooseRandomNode();
+        if (registeredPeers.get(node.getIdentifier()) == null) {
+            NodeRecord randomNode = randomNodes.size() == 0 ? node : chooseRandomNode();
 
-                NodeInformation messageWithRandomNode = prepareRandomNodeInfoMessage(randomNode);
-                sender.sendToSpecificSocket(newNodeSocket, messageWithRandomNode.getBytes());
-            } else {
-                Collision collision = new Collision();
-                sender.sendToSpecificSocket(newNodeSocket, collision.getBytes());
-            }
-        } finally {
-            newNodeSocket.close();
+            NodeInformation messageWithRandomNode = prepareRandomNodeInfoMessage(randomNode);
+            sender.sendToSpecificSocket(node.getNodeSocket(), messageWithRandomNode.getBytes());
+        } else {
+            Collision collision = new Collision();
+            sender.sendToSpecificSocket(node.getNodeSocket(), collision.getBytes());
         }
     }
 
@@ -58,9 +53,9 @@ public class DiscoveryNode implements Node {
     }
 
     private synchronized void respondToInquiry(Socket storeDataSocket) throws IOException {
-            NodeRecord randomNode = chooseRandomNode();
-            NodeInformation nodeToContact = prepareRandomNodeInfoMessage(randomNode);
-            sender.sendToSpecificSocket(storeDataSocket, nodeToContact.getBytes());
+        NodeRecord randomNode = chooseRandomNode();
+        NodeInformation nodeToContact = prepareRandomNodeInfoMessage(randomNode);
+        sender.sendToSpecificSocket(storeDataSocket, nodeToContact.getBytes());
     }
 
     @Override
@@ -99,7 +94,8 @@ public class DiscoveryNode implements Node {
     }
 
     @Override
-    public void processText(String text) throws IOException { }
+    public void processText(String text) throws IOException {
+    }
 
     public static void main(String[] args) {
         discoveryHost = args[0];

@@ -1,15 +1,16 @@
-package chord.node;
+package chord.messages.messageprocessors;
 
 import chord.messages.*;
+import chord.node.NodeRecord;
+import chord.node.Peer;
 import chord.transport.TCPSender;
 import chord.util.FingerTableManagement;
 
 import java.io.IOException;
 import java.net.Socket;
-import java.util.ArrayList;
 import java.util.HashMap;
 
-class MessageProcessor {
+public class MessageProcessor {
 
     private TCPSender sender = new TCPSender();
     private String host;
@@ -17,20 +18,21 @@ class MessageProcessor {
     private int ID;
     private Peer parent;
     private NodeRecord self;
-    private ArrayList<NodeRecord> knownNodes;
-    private HashMap<Integer, Integer> powersOfTwo = new HashMap<>(FingerTableManagement.returnSquares());
+    private HashMap<Integer, NodeRecord> knownNodes;
+    private FingerTableManagement fingerTableManagement = new FingerTableManagement();
 
-    MessageProcessor(String host, int port, int ID, Peer parent, ArrayList<NodeRecord> knownNodes) throws IOException {
+
+    public MessageProcessor(String host, int port, int ID, Peer parent, HashMap<Integer, NodeRecord> knownNodes) throws IOException {
         this.host = host;
         this.port = port;
         this.ID = ID;
         this.parent = parent;
         this.knownNodes = knownNodes;
         self = new NodeRecord(host + ":" + port, ID, host, false);
-        knownNodes.add(self);
+        knownNodes.put(ID, self);
     }
 
-    void processRegistration(NodeInformation information) throws IOException {
+    public void processRegistration(NodeInformation information) throws IOException {
         if (information.getSixteenBitID() != ID) { //not first node in the ring so find out where to go
             Lookup findLocation = new Lookup();
             findLocation.setRoutingPath(host + ":" + port + ",");
@@ -38,7 +40,7 @@ class MessageProcessor {
             Socket randomNodeSocket = new Socket(information.getHostPort().split(":")[0],
                     Integer.parseInt(information.getHostPort().split(":")[1]));
             sender.sendToSpecificSocket(randomNodeSocket, findLocation.getBytes());
-            knownNodes.add(
+            knownNodes.put(information.getSixteenBitID(),
                     new NodeRecord(information.getHostPort(),
                             information.getSixteenBitID(),
                             information.getNickname(), true));
@@ -47,7 +49,7 @@ class MessageProcessor {
         }
     }
 
-    void processLookup(Lookup lookupEvent, NodeRecord predecessor) throws IOException {
+    public void processLookup(Lookup lookupEvent, NodeRecord predecessor) throws IOException {
         int payload = lookupEvent.getPayloadID();
         int predecessorID = predecessor.getIdentifier();
         NodeRecord successor = parent.getFingerTable().get(1);
@@ -71,12 +73,10 @@ class MessageProcessor {
                 NodeRecord currentRow = parentFingerTable.get(key);
                 NodeRecord nextRow = parentFingerTable.get(key + 1);
                 if (nextRow == null) {
-                    //you're at the last FT entry, forward to currentRow
-                    forwardLookup(lookupEvent, currentRow);
+                    forwardLookup(lookupEvent, currentRow); //you're at the last FT entry, forward to currentRow
                     break;
                 } else if (currentRow.getIdentifier() <= payload && payload < nextRow.getIdentifier()) {
-                    //currentRow is largest FT row that's still less than k, send to there
-                    forwardLookup(lookupEvent, currentRow);
+                    forwardLookup(lookupEvent, currentRow); //currentRow is largest FT row that's still less than k, send to there
                     break;
                 }
             }
@@ -96,14 +96,14 @@ class MessageProcessor {
     }
 
     private void forwardLookup(Lookup lookup, NodeRecord forwardTarget) throws IOException {
-        lookup.setRoutingPath(lookup.getRoutingPath() + "," + host + ":" + port);
+        lookup.setRoutingPath(lookup.getRoutingPath() + host + ":" + port + ",");
         lookup.setNumHops((lookup.getNumHops() + 1));
         Socket successorSocket = new Socket(forwardTarget.getHost(), forwardTarget.getPort());
         sender.sendToSpecificSocket(successorSocket, lookup.getBytes());
         System.out.println("Hops: " + lookup.getNumHops() + "\tfor id: " + lookup.getPayloadID());
     }
 
-    void processDestination(DestinationNode destinationNode) throws IOException {
+    public void processDestination(DestinationNode destinationNode) throws IOException {
         //a destination means that node's your successor, so set successor
         String successorHostPort = destinationNode.getHostPort();
         int successorID = destinationNode.getDestinationID();
@@ -119,25 +119,25 @@ class MessageProcessor {
         updatePredecessor.setPredecessorNickname(host);
         sender.sendToSpecificSocket(successorNode.getNodeSocket(), updatePredecessor.getBytes());
 
-        if (!knownNodes.contains(successorNode)) {
-            knownNodes.add(successorNode);
-        }
+        knownNodes.putIfAbsent(successorID, successorNode);
     }
 
-    void processPredecessorUpdate(UpdatePredecessor updatePredecessor) throws IOException {
+    public void processPredecessorUpdate(UpdatePredecessor updatePredecessor) throws IOException {
         String predecessorHostPort = updatePredecessor.getPredecessorHostPort();
         int predecessorID = updatePredecessor.getPredecessorID();
         String predecessorNickname = updatePredecessor.getPredecessorNickname();
         NodeRecord newPredecessor =
                 new NodeRecord(predecessorHostPort, predecessorID, predecessorNickname, true);
         parent.setPredecessor(newPredecessor);
+        knownNodes.putIfAbsent(predecessorID, newPredecessor);
+        fingerTableManagement.updateFingerTable(ID, parent.getFingerTable(), knownNodes);
 
         NodeRecord successor = parent.getFingerTable().get(1); //tell new predecessor about your successor
         createSuccessorInformation(successor, newPredecessor.getNodeSocket());
         //TODO transfer data items as necessary!
     }
 
-    void createSuccessorInformation(NodeRecord successor, Socket askerSocket) throws IOException {
+    public void createSuccessorInformation(NodeRecord successor, Socket askerSocket) throws IOException {
         SuccessorInformation successorInformation = new SuccessorInformation();
         successorInformation.setSuccessorHostPort(successor.getHost() + ":" + successor.getPort());
         successorInformation.setSuccessorID(successor.getIdentifier());
@@ -145,7 +145,7 @@ class MessageProcessor {
         sender.sendToSpecificSocket(askerSocket, successorInformation.getBytes());
     }
 
-    void processSuccessorInformation(SuccessorInformation successorInformation) throws IOException {
+    public void processSuccessorInformation(SuccessorInformation successorInformation) throws IOException {
         String successorHostPort = successorInformation.getSuccessorHostPort();
 
         if (!successorHostPort.split(":")[0].equals(host) &&
@@ -156,24 +156,17 @@ class MessageProcessor {
 
             NodeRecord successorNode = new NodeRecord(successorHostPort, successorID, successorNickname, true);
 
-            if (!knownNodes.contains(successorNode)) {
-                knownNodes.add(successorNode);
-            }
+            knownNodes.putIfAbsent(successorID, successorNode);
 
             AskForSuccessor askForSuccessor = new AskForSuccessor();
             sender.sendToSpecificSocket(successorNode.getNodeSocket(), askForSuccessor.getBytes());
         } else {
-            parent.getFingerTable();
-            for (int i = 2; i < 17; i++) { //skip successor row
-                int maxRowValue = ID + powersOfTwo.get(i);
-            }
-            for (NodeRecord otherNode : knownNodes) {
-
-            }
+            fingerTableManagement.updateFingerTable(ID, parent.getFingerTable(), knownNodes);
+            parent.setFingerTableModified(true);
         }
     }
 
-    void processPayload(FilePayload filePayload, HashMap<Integer, String> filesResponsibleFor) throws IOException {
+    public void processPayload(FilePayload filePayload, HashMap<Integer, String> filesResponsibleFor) throws IOException {
         if (filesResponsibleFor.get(filePayload.getFileID()) != null) {
             filePayload.writeFile(filePayload.getFileByteArray(), "/tmp/" + filePayload.getFileName());
             synchronized (filesResponsibleFor) {

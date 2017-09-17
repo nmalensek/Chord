@@ -5,7 +5,6 @@ import chord.util.CreateIdentifier;
 
 import java.io.IOException;
 import java.net.Inet4Address;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -14,7 +13,7 @@ public class FingerTableTest {
     private HashMap<Integer, NodeRecord> fingerTable = new HashMap<>();
     private int identifier;
 
-    public FingerTableTest() {
+    public FingerTableTest() throws IOException {
         identifier = CreateIdentifier.createIdentifier(String.valueOf(System.currentTimeMillis()));
     }
 
@@ -29,7 +28,7 @@ public class FingerTableTest {
 
     public HashMap<Integer, Integer> returnSquares() {
         HashMap<Integer, Integer> map = new HashMap<>();
-        for (int i = 1; i < 5; i++) {
+        for (int i = 1; i < 6; i++) {
             Double max = Math.pow(2, (i-1));
             int maxID = max.intValue();
             map.put(i, maxID);
@@ -42,53 +41,66 @@ public class FingerTableTest {
 
     }
 
-    private void constructExampleFingerTable(int[] testNodes, int testID) { //test with 4-bit table
-        HashMap<Integer, Integer> resultMap = new HashMap<>();
-        ArrayList<Integer> knownNodes = new ArrayList<>();
+    private void constructExampleFingerTable(NodeRecord[] testNodes, int testID) { //test with 5-bit table
+        HashMap<Integer, NodeRecord> resultMap = new HashMap<>();
+        HashMap<Integer, NodeRecord> knownNodes = new HashMap<>();
 
-        for (int i : testNodes) {
-            knownNodes.add(i);
+        for (NodeRecord testNode : testNodes) {
+            knownNodes.put(testNode.getIdentifier(), testNode);
         }
 
         HashMap<Integer, Integer> twoMap = new HashMap<>(returnSquares());
 
-        for (int i = 1; i < 5; i++) { //for every row in the FT
+        for (int i = 1; i < 6; i++) { //for every row in the FT
             int k = testID + (twoMap.get(i)); //get the row value
-            if (k >= 16) {
-                k = k % 16;
+            if (k >= 32) {
+                k = k % 32;
             }
             int smallestID = 65535;
-            if (knownNodes.contains(k)) {
-                resultMap.put(i, k);
+            if (knownNodes.get(k) != null) {
+                resultMap.put(i, knownNodes.get(k));
             } else {
-                for (int nodeID : knownNodes) { //get the smallest value >= k
-                    if (nodeID == 4 && k > testID) { //simulating storing at successor
-                        resultMap.put(i, nodeID);
-                        break;
-                    } else {
-                        for (int n : knownNodes) {
+                for (int n : knownNodes.keySet()) { //get the smallest value >= k
                             if (n > k && n < smallestID) {
                                 smallestID = n;
                             }
                         }
-                        resultMap.put(i, smallestID);
-                    }
+                        if (smallestID == 65535) { //no node has a larger id, should wrap around to smallest node
+                            for (int nodeID : knownNodes.keySet()) {
+                                if (smallestID == 65535) {
+                                    smallestID = nodeID;
+                                } else if (nodeID < smallestID) {
+                                    smallestID = nodeID;
+                                }
+                            }
+                        }
+                        resultMap.put(i, knownNodes.get(smallestID));
                 }
             }
-        }
-
-        System.out.println("Results:");
+        System.out.println("Results for node " + testID + ":");
         for (int row : resultMap.keySet()) {
-            System.out.println(row + "\t" + resultMap.get(row));
+            System.out.println(row + "\t" + resultMap.get(row).getIdentifier());
         }
-    }
 
-    int[] testArray = {
-      8, 11, 14
+        }
+
+    NodeRecord[] testArray = {
+      new NodeRecord("test:1234", 2, "test", false),
+      new NodeRecord("test:1234", 5, "test", false),
+      new NodeRecord("test:1234", 8, "test", false),
+      new NodeRecord("test:1234", 14, "test", false),
+      new NodeRecord("test:1234", 15, "test", false),
+      new NodeRecord("test:1234", 19, "test", false),
+      new NodeRecord("test:1234", 23, "test", false),
+      new NodeRecord("test:1234", 26, "test", false),
+      new NodeRecord("test:1234", 29, "test", false),
+      new NodeRecord("test:1234", 31, "test", false),
     };
 
     private void testFingerTable() {
-        constructExampleFingerTable(testArray, 4);
+        for (NodeRecord node : testArray) {
+         constructExampleFingerTable(testArray, node.getIdentifier());
+        }
     }
 
     private void comparisonTest() {
@@ -112,7 +124,7 @@ public class FingerTableTest {
 
     //TODO also create several types of lookup classes (if we need to retrieve files from nodes to nodes)!
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws IOException {
         FingerTableTest fingerTableTest = new FingerTableTest();
         try {
             fingerTableTest.constructInitialFingerTable();

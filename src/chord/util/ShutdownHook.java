@@ -26,13 +26,17 @@ public class ShutdownHook extends Thread {
     }
 
     //TODO transfer files to successor!
+    //tell predecessor about your successor
 
     @Override
     public void run() {
-        NodeLeaving leaving = new NodeLeaving();
-        leaving.setSixteenBitID(ownerNodeID);
         NodeRecord successor = owner.getFingerTable().get(1);
         NodeRecord predecessor = owner.getPredecessor();
+
+        NodeLeaving leaving = new NodeLeaving();
+        leaving.setSixteenBitID(ownerNodeID);
+        leaving.setPredecessorInfo(successor.getHost() + ":" + successor.getPort() + ":" + successor.getIdentifier());
+        leaving.setPredecessorInfo(predecessor.getHost() + ":" + predecessor.getPort() + ":" + predecessor.getIdentifier());
         try {
             Socket successorSocket = new Socket(successor.getHost(), successor.getPort());
             Socket predecessorSocket = new Socket(predecessor.getHost(), predecessor.getPort());

@@ -39,8 +39,7 @@ public class NodeRecord {
 
         NodeRecord that = (NodeRecord) o;
 
-        if (port != that.port) return false;
-        return host != null ? host.equals(that.host) : that.host == null;
+        return identifier == that.identifier;
     }
 
     @Override

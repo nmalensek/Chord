@@ -19,15 +19,15 @@ public class QuerySuccessorThread extends Thread {
         this.queryInterval = queryInterval;
     }
 
-    private void queryOwnerSuccessor() throws IOException {
-        NodeRecord successor = owner.getFingerTable().get(1);
-        Socket successorSocket = new Socket(successor.getHost(), successor.getPort());
+    private void queryOwnerSuccessor() {
         try {
+            NodeRecord successor = owner.getFingerTable().get(1);
             Query query = new Query();
-            sender.sendToSpecificSocket(successorSocket, query.getBytes());
-        } finally {
-            successorSocket.close();
+            sender.sendToSpecificSocket(successor.getNodeSocket(), query.getBytes());
+        } catch (IOException e) {
+            System.out.println("Could not contact successor, message was not sent.");
         }
+
     }
 
     @Override
@@ -38,8 +38,6 @@ public class QuerySuccessorThread extends Thread {
                 queryOwnerSuccessor();
             }
         } catch (InterruptedException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
             e.printStackTrace();
         }
     }

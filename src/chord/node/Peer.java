@@ -1,6 +1,8 @@
 package chord.node;
 
 import chord.messages.*;
+import chord.messages.messageprocessors.HandleNodeLeaving;
+import chord.messages.messageprocessors.MessageProcessor;
 import chord.transport.TCPSender;
 import chord.transport.TCPServerThread;
 import chord.util.CreateIdentifier;
@@ -12,7 +14,6 @@ import java.io.IOException;
 import java.net.Inet4Address;
 import java.net.Socket;
 import java.net.UnknownHostException;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Scanner;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -30,9 +31,10 @@ public class Peer implements Node {
     private TCPServerThread serverThread;
     private NodeRecord predecessor;
     private MessageProcessor messageProcessor;
+    private HandleNodeLeaving handleNodeLeaving;
     private final HashMap<Integer, NodeRecord> fingerTable = new HashMap<>();
     private final HashMap<Integer, String> filesResponsibleFor = new HashMap<>();
-    private ArrayList<NodeRecord> knownNodes = new ArrayList<>();
+    private HashMap<Integer, NodeRecord> knownNodes = new HashMap<>();
     private AtomicBoolean fingerTableModified = new AtomicBoolean();
     private AtomicBoolean filesResponsibleForModified = new AtomicBoolean();
 
@@ -41,6 +43,7 @@ public class Peer implements Node {
         setPort();
         connectToNetwork();
         messageProcessor = new MessageProcessor(peerHost, peerPort, nodeIdentifier, this, knownNodes);
+        handleNodeLeaving = new HandleNodeLeaving(peerHost, peerPort, nodeIdentifier, this, knownNodes);
         constructInitialFingerTable();
     }
 
@@ -85,47 +88,47 @@ public class Peer implements Node {
 
     @Override
     public void onEvent(Event event, Socket destinationSocket) throws IOException {
-        if (event instanceof NodeInformation) {
-            NodeInformation information = (NodeInformation) event;
-            messageProcessor.processRegistration(information);
-            addShutDownHook();
-        } else if (event instanceof Collision) {
-            System.out.println("This node's ID already exists in the overlay. Please enter a new one:");
-            promptForNewID();
-            connectToNetwork();
-        } else if (event instanceof DestinationNode) {
-            messageProcessor.processDestination((DestinationNode) event);
-            //create fingerTable
-        } else if (event instanceof Lookup) {
-            messageProcessor.processLookup(((Lookup) event), predecessor);
-        } else if (event instanceof FilePayload) {
-            messageProcessor.processPayload((FilePayload) event, filesResponsibleFor);
-        } else if (event instanceof Query) {
-            sender.sendToSpecificSocket(destinationSocket, writeQueryResponse()); //send predecessor info
-        } else if (event instanceof QueryResponse) {
-            QueryResponse queryResponseMessage = (QueryResponse) event;
-            if (queryResponseMessage.getPredecessorID() != nodeIdentifier) {
-                updateSuccessor(queryResponseMessage);
+        try {
+            if (event instanceof NodeInformation) {
+                NodeInformation information = (NodeInformation) event;
+                messageProcessor.processRegistration(information);
+                addShutDownHook();
+            } else if (event instanceof Collision) {
+                System.out.println("This node's ID already exists in the overlay. Please enter a new one:");
+                promptForNewID();
+                connectToNetwork();
+            } else if (event instanceof DestinationNode) {
+                messageProcessor.processDestination((DestinationNode) event);
+                //create fingerTable
+            } else if (event instanceof Lookup) {
+                messageProcessor.processLookup(((Lookup) event), predecessor);
+            } else if (event instanceof FilePayload) {
+                messageProcessor.processPayload((FilePayload) event, filesResponsibleFor);
+            } else if (event instanceof Query) {
+                sender.sendToSpecificSocket(destinationSocket, writeQueryResponse()); //send predecessor info
+            } else if (event instanceof QueryResponse) {
+                QueryResponse queryResponseMessage = (QueryResponse) event;
+                if (queryResponseMessage.getPredecessorID() != nodeIdentifier) {
+                    updateSuccessor(queryResponseMessage);
+                }
+            } else if (event instanceof UpdatePredecessor) {
+                messageProcessor.processPredecessorUpdate((UpdatePredecessor) event);
+            } else if (event instanceof NodeLeaving) {
+                if (fingerTable.get(1).getIdentifier() == (((NodeLeaving) event).getSixteenBitID())) { //successor left
+                    handleNodeLeaving.processSuccessorLeaving((NodeLeaving) event);
+                } else {
+                    handleNodeLeaving.processPredecessorLeaving((NodeLeaving) event);
+                }
+            } else if (event instanceof SuccessorInformation) {
+                messageProcessor.processSuccessorInformation((SuccessorInformation) event);
+            } else if (event instanceof AskForSuccessor) {
+                messageProcessor.createSuccessorInformation(fingerTable.get(1), destinationSocket);
+                AskForSuccessor askForSuccessor = new AskForSuccessor(); //someone's updating their finger table, update yours too
+                sender.sendToSpecificSocket(fingerTable.get(1).getNodeSocket(), askForSuccessor.getBytes());
             }
-        } else if (event instanceof UpdatePredecessor) {
-            messageProcessor.processPredecessorUpdate((UpdatePredecessor) event);
-        } else if (event instanceof NodeLeaving) {
-            if (fingerTable.get(1).getIdentifier() == (((NodeLeaving) event).getSixteenBitID())) {
-                //successor left
-                fingerTable.remove(1); //TODO: re-make finger table instead of just remove
-            } else {
-                //predecessor left, find new predecessor
-                predecessor = null;
-            }
-            //update finger table
-        } else if (event instanceof SuccessorInformation) {
-            messageProcessor.processSuccessorInformation((SuccessorInformation) event);
-        } else if (event instanceof AskForSuccessor) {
-            messageProcessor.createSuccessorInformation(fingerTable.get(1), destinationSocket);
+        } catch (IOException e) {
+            handleNodeLeaving.removeDeadNodeAndUpdateFT(destinationSocket);
         }
-    }
-
-    private void createFingertable() {
 
     }
 
