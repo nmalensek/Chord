@@ -10,6 +10,7 @@ import chord.utilitythreads.DiagnosticPrinterThread;
 import chord.utilitythreads.QuerySuccessorThread;
 import chord.util.ShutdownHook;
 
+import java.io.File;
 import java.io.IOException;
 import java.net.Inet4Address;
 import java.net.Socket;
@@ -32,6 +33,7 @@ public class Peer implements Node {
     private NodeRecord predecessor;
     private MessageProcessor messageProcessor;
     private HandleNodeLeaving handleNodeLeaving;
+    private Socket discoveryNodeSocket = new Socket(discoveryNodeHost, discoveryNodePort);
     private final HashMap<Integer, NodeRecord> fingerTable = new HashMap<>();
     private final HashMap<Integer, String> filesResponsibleFor = new HashMap<>();
     private HashMap<Integer, NodeRecord> knownNodes = new HashMap<>();
@@ -59,7 +61,7 @@ public class Peer implements Node {
     }
 
     private void setPort() {
-        while(serverThread.getPortNumber() == 0) {
+        while (serverThread.getPortNumber() == 0) {
             peerPort = serverThread.getPortNumber();
         }
     }
@@ -69,7 +71,7 @@ public class Peer implements Node {
         nodeInformation.setSixteenBitID(nodeIdentifier);
         nodeInformation.setHostPort(peerHost + ":" + peerPort);
         nodeInformation.setNickname(peerHost + ":" + peerPort);
-        sender.sendToSpecificSocket(new Socket(discoveryNodeHost, discoveryNodePort), nodeInformation.getBytes());
+        sender.sendToSpecificSocket(discoveryNodeSocket, nodeInformation.getBytes());
     }
 
     private void constructInitialFingerTable() throws IOException {
@@ -83,7 +85,7 @@ public class Peer implements Node {
 
     private void addShutDownHook() {
         Runtime.getRuntime().addShutdownHook(new ShutdownHook(sender, this,
-                nodeIdentifier, discoveryNodeHost, discoveryNodePort));
+                nodeIdentifier, discoveryNodeSocket));
     }
 
     @Override
@@ -147,19 +149,31 @@ public class Peer implements Node {
         fingerTable.put(1, updatedSuccessor);
         fingerTableModified.set(true);
         Query queryNewSuccessor = new Query(); //check if this node is successor to new node
-        sender.sendToSpecificSocket(
-                new Socket(fingerTable.get(1).getHost(), fingerTable.get(1).getPort()), queryNewSuccessor.getBytes());
+        sender.sendToSpecificSocket(updatedSuccessor.getNodeSocket(), queryNewSuccessor.getBytes());
+    }
+
+    public void sendFilesToSuccessor() throws IOException {
+        for (int fileKey : filesResponsibleFor.keySet()) {
+            FilePayload file = new FilePayload();
+            file.setFileID(fileKey);
+            file.setFileName(filesResponsibleFor.get(fileKey).substring(4, filesResponsibleFor.get(fileKey).length() + 1));
+            file.setFileToTransfer(new File(filesResponsibleFor.get(fileKey)));
+            System.out.println("Sending file " + fileKey + " to " + fingerTable.get(1).getNickname() + "\tID: "
+                    + fingerTable.get(1).getIdentifier());
+            TCPSender sender = new TCPSender();
+            sender.sendToSpecificSocket(fingerTable.get(1).getNodeSocket(), file.getBytes());
+        }
     }
 
     private void promptForNewID() {
         Scanner userInput = new Scanner(System.in);
-            try {
-                nodeIdentifier = Integer.parseInt(userInput.nextLine());
-            } catch (NumberFormatException n) {
-                System.out.println("Identifier must be an integer between 0 and 65535, please try again.");
-                promptForNewID();
-            }
+        try {
+            nodeIdentifier = Integer.parseInt(userInput.nextLine());
+        } catch (NumberFormatException n) {
+            System.out.println("Identifier must be an integer between 0 and 65535, please try again.");
+            promptForNewID();
         }
+    }
 
     public HashMap<Integer, NodeRecord> getFingerTable() {
         synchronized (fingerTable) {
@@ -185,10 +199,21 @@ public class Peer implements Node {
         }
     }
 
-    public boolean isFingerTableModified() { return fingerTableModified.get(); }
-    public boolean isFilesResponsibleForModified() { return filesResponsibleForModified.get(); }
-    public void setFingerTableModified(boolean newValue) { fingerTableModified.set(newValue);}
-    public void setFilesResponsibleForModified(boolean newValue) { filesResponsibleForModified.set(newValue); }
+    public boolean isFingerTableModified() {
+        return fingerTableModified.get();
+    }
+
+    public boolean isFilesResponsibleForModified() {
+        return filesResponsibleForModified.get();
+    }
+
+    public void setFingerTableModified(boolean newValue) {
+        fingerTableModified.set(newValue);
+    }
+
+    public void setFilesResponsibleForModified(boolean newValue) {
+        filesResponsibleForModified.set(newValue);
+    }
 
     @Override
     public void processText(String text) {

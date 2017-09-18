@@ -13,20 +13,15 @@ public class ShutdownHook extends Thread {
     private TCPSender sender;
     private Peer owner;
     private int ownerNodeID;
-    private String discoveryNodeHost;
-    private int discoveryNodePort;
+    private Socket discoveryNodeSocket;
 
     public ShutdownHook(TCPSender sender, Peer owner, int ownerNodeID,
-                        String discoveryNodeHost, int discoveryNodePort) {
+                        Socket discoveryNodeSocket) {
         this.sender = sender;
         this.ownerNodeID = ownerNodeID;
         this.owner = owner;
-        this.discoveryNodeHost = discoveryNodeHost;
-        this.discoveryNodePort = discoveryNodePort;
+        this.discoveryNodeSocket = discoveryNodeSocket;
     }
-
-    //TODO transfer files to successor!
-    //tell predecessor about your successor
 
     @Override
     public void run() {
@@ -35,15 +30,13 @@ public class ShutdownHook extends Thread {
 
         NodeLeaving leaving = new NodeLeaving();
         leaving.setSixteenBitID(ownerNodeID);
-        leaving.setPredecessorInfo(successor.getHost() + ":" + successor.getPort() + ":" + successor.getIdentifier());
+        leaving.setSuccessorInfo(successor.getHost() + ":" + successor.getPort() + ":" + successor.getIdentifier());
         leaving.setPredecessorInfo(predecessor.getHost() + ":" + predecessor.getPort() + ":" + predecessor.getIdentifier());
         try {
-            Socket successorSocket = new Socket(successor.getHost(), successor.getPort());
-            Socket predecessorSocket = new Socket(predecessor.getHost(), predecessor.getPort());
-            Socket discoveryNodeSocket = new Socket(discoveryNodeHost, discoveryNodePort);
-            sender.sendToSpecificSocket(successorSocket, leaving.getBytes());
-            sender.sendToSpecificSocket(predecessorSocket, leaving.getBytes());
+            sender.sendToSpecificSocket(successor.getNodeSocket(), leaving.getBytes());
+            sender.sendToSpecificSocket(predecessor.getNodeSocket(), leaving.getBytes());
             sender.sendToSpecificSocket(discoveryNodeSocket, leaving.getBytes());
+            owner.sendFilesToSuccessor();
         } catch (IOException e) {
             e.printStackTrace();
         }
