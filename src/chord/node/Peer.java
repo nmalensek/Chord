@@ -156,7 +156,7 @@ public class Peer implements Node {
         for (int fileKey : filesResponsibleFor.keySet()) {
             FilePayload file = new FilePayload();
             file.setFileID(fileKey);
-            file.setFileName(filesResponsibleFor.get(fileKey).substring(4, filesResponsibleFor.get(fileKey).length() + 1));
+            file.setFileName(filesResponsibleFor.get(fileKey).substring(5, filesResponsibleFor.get(fileKey).length()));
             file.setFileToTransfer(new File(filesResponsibleFor.get(fileKey)));
             System.out.println("Sending file " + fileKey + " to " + fingerTable.get(1).getNickname() + "\tID: "
                     + fingerTable.get(1).getIdentifier());

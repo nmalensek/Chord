@@ -142,7 +142,7 @@ public class MessageProcessor {
             if (fileKey <= newPredecessorID) {
                 FilePayload file = new FilePayload();
                 file.setFileID(fileKey);
-                file.setFileName(fileHashMap.get(fileKey).substring(4, fileHashMap.get(fileKey).length() + 1));
+                file.setFileName(fileHashMap.get(fileKey).substring(5, fileHashMap.get(fileKey).length()));
                 file.setFileToTransfer(new File(fileHashMap.get(fileKey)));
                 System.out.println("Sending file " + fileKey + " to " + newPredecessorHostPort + "\tID: "
                         + newPredecessorID);
