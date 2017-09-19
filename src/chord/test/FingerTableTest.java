@@ -1,6 +1,5 @@
 package chord.test;
 
-import chord.node.NodeRecord;
 import chord.util.CreateIdentifier;
 
 import java.io.IOException;
@@ -10,7 +9,7 @@ import java.util.concurrent.ThreadLocalRandom;
 
 public class FingerTableTest {
 
-    private HashMap<Integer, NodeRecord> fingerTable = new HashMap<>();
+    private HashMap<Integer, TestNodeRecord> fingerTable = new HashMap<>();
     private int identifier;
 
     public FingerTableTest() throws IOException {
@@ -18,8 +17,8 @@ public class FingerTableTest {
     }
 
     private void constructInitialFingerTable() throws IOException {
-        NodeRecord thisNode = new NodeRecord(Inet4Address.getLocalHost().getHostName()
-                + ":" + 12345, identifier, Inet4Address.getLocalHost().getHostName(), false);
+        TestNodeRecord thisNode = new TestNodeRecord(Inet4Address.getLocalHost().getHostName()
+                + ":" + 12345, identifier, Inet4Address.getLocalHost().getHostName());
         for (int i = 1; i < 17; i++) {
             fingerTable.put(i, thisNode);
 //            System.out.println(i + "\t" + thisNode.getIdentifier());
@@ -41,11 +40,11 @@ public class FingerTableTest {
 
     }
 
-    private void constructExampleFingerTable(NodeRecord[] testNodes, int testID) { //test with 5-bit table
-        HashMap<Integer, NodeRecord> resultMap = new HashMap<>();
-        HashMap<Integer, NodeRecord> knownNodes = new HashMap<>();
+    private void constructExampleFingerTable(TestNodeRecord[] testNodes, int testID) { //test with 5-bit table
+        HashMap<Integer, TestNodeRecord> resultMap = new HashMap<>();
+        HashMap<Integer, TestNodeRecord> knownNodes = new HashMap<>();
 
-        for (NodeRecord testNode : testNodes) {
+        for (TestNodeRecord testNode : testNodes) {
             knownNodes.put(testNode.getIdentifier(), testNode);
         }
 
@@ -84,21 +83,21 @@ public class FingerTableTest {
 
         }
 
-    NodeRecord[] testArray = {
-      new NodeRecord("test:1234", 2, "test", false),
-      new NodeRecord("test:1234", 5, "test", false),
-      new NodeRecord("test:1234", 8, "test", false),
-      new NodeRecord("test:1234", 14, "test", false),
-      new NodeRecord("test:1234", 15, "test", false),
-      new NodeRecord("test:1234", 19, "test", false),
-      new NodeRecord("test:1234", 23, "test", false),
-      new NodeRecord("test:1234", 26, "test", false),
-      new NodeRecord("test:1234", 29, "test", false),
-      new NodeRecord("test:1234", 31, "test", false),
+    TestNodeRecord[] testArray = {
+      new TestNodeRecord("test:1234", 2, "test"),
+      new TestNodeRecord("test:1234", 5, "test"),
+      new TestNodeRecord("test:1234", 8, "test"),
+      new TestNodeRecord("test:1234", 14, "test"),
+      new TestNodeRecord("test:1234", 15, "test"),
+      new TestNodeRecord("test:1234", 19, "test"),
+      new TestNodeRecord("test:1234", 23, "test"),
+      new TestNodeRecord("test:1234", 26, "test"),
+      new TestNodeRecord("test:1234", 29, "test"),
+      new TestNodeRecord("test:1234", 31, "test"),
     };
 
     private void testFingerTable() {
-        for (NodeRecord node : testArray) {
+        for (TestNodeRecord node : testArray) {
          constructExampleFingerTable(testArray, node.getIdentifier());
         }
     }

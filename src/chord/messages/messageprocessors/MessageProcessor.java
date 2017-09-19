@@ -5,6 +5,7 @@ import chord.node.NodeRecord;
 import chord.node.Peer;
 import chord.transport.TCPSender;
 import chord.util.FingerTableManagement;
+import chord.util.SplitHostPort;
 
 import java.io.File;
 import java.io.IOException;
@@ -21,20 +22,25 @@ public class MessageProcessor {
     private NodeRecord self;
     private HashMap<Integer, NodeRecord> knownNodes;
     private FingerTableManagement fingerTableManagement = new FingerTableManagement();
+    private SplitHostPort split = new SplitHostPort();
+    private Socket parentSocket;
 
 
-    public MessageProcessor(String host, int port, int ID, Peer parent, HashMap<Integer, NodeRecord> knownNodes) throws IOException {
+    public MessageProcessor(String host, int port, int ID,
+                            Peer parent, HashMap<Integer, NodeRecord> knownNodes, Socket parentSocket) throws IOException {
         this.host = host;
         this.port = port;
         this.ID = ID;
         this.parent = parent;
         this.knownNodes = knownNodes;
-        self = new NodeRecord(host + ":" + port, ID, host, false);
+        this.parentSocket = parentSocket;
+        self = new NodeRecord(host + ":" + port, ID, host, parentSocket);
         knownNodes.put(ID, self);
     }
 
     public void processRegistration(NodeInformation information) throws IOException {
         if (information.getSixteenBitID() != ID) { //not first node in the ring so find out where to go
+            knownNodes.remove(ID); //remove self from known nodes so FT is ok
             Lookup findLocation = new Lookup();
             findLocation.setRoutingPath(host + ":" + port + ",");
             findLocation.setPayloadID(ID);
@@ -44,7 +50,7 @@ public class MessageProcessor {
             knownNodes.put(information.getSixteenBitID(),
                     new NodeRecord(information.getHostPort(),
                             information.getSixteenBitID(),
-                            information.getNickname(), true));
+                            information.getNickname(), randomNodeSocket));
         } else {
             parent.setPredecessor(self);
         }
@@ -109,7 +115,10 @@ public class MessageProcessor {
         String successorHostPort = destinationNode.getHostPort();
         int successorID = destinationNode.getDestinationID();
         String successorNickname = destinationNode.getDestinationNickname();
-        NodeRecord successorNode = new NodeRecord(successorHostPort, successorID, successorNickname, true);
+        Socket succcessorSocket =
+                new Socket(split.getHost(successorHostPort), split.getPort(successorHostPort));
+
+        NodeRecord successorNode = new NodeRecord(successorHostPort, successorID, successorNickname, succcessorSocket);
         parent.getFingerTable().put(1, successorNode);
 
         //TODO Add successor's predecessor information to destination message
@@ -123,12 +132,13 @@ public class MessageProcessor {
         knownNodes.putIfAbsent(successorID, successorNode);
     }
 
-    public void processPredecessorUpdate(UpdatePredecessor updatePredecessor, HashMap<Integer, String> fileHashMap) throws IOException {
+    public void processPredecessorUpdate(UpdatePredecessor updatePredecessor, HashMap<Integer, String> fileHashMap,
+                                         Socket predecessorSocket) throws IOException {
         String newPredecessorHostPort = updatePredecessor.getPredecessorHostPort();
         int newPredecessorID = updatePredecessor.getPredecessorID();
         String newPredecessorNickname = updatePredecessor.getPredecessorNickname();
         NodeRecord newPredecessor =
-                new NodeRecord(newPredecessorHostPort, newPredecessorID, newPredecessorNickname, true);
+                new NodeRecord(newPredecessorHostPort, newPredecessorID, newPredecessorNickname, predecessorSocket);
         parent.setPredecessor(newPredecessor);
         knownNodes.putIfAbsent(newPredecessorID, newPredecessor);
 
@@ -165,15 +175,20 @@ public class MessageProcessor {
     public void processSuccessorInformation(SuccessorInformation successorInformation) throws IOException {
         String successorHostPort = successorInformation.getSuccessorHostPort();
 
-        if (!successorHostPort.split(":")[0].equals(host) &&
-                Integer.parseInt(successorHostPort.split(":")[1]) != port) { //stop if node's successor is this node
+        if (!split.getHost(successorHostPort).equals(host) &&
+                split.getPort(successorHostPort) != port) { //stop if node's successor is this node
 
             int successorID = successorInformation.getSuccessorID();
             String successorNickname = successorInformation.getSuccessorNickname();
 
-            NodeRecord successorNode = new NodeRecord(successorHostPort, successorID, successorNickname, true);
-
-            knownNodes.putIfAbsent(successorID, successorNode);
+            NodeRecord successorNode;
+            if (knownNodes.get(successorID) == null) {
+                Socket successorSocket = new Socket(split.getHost(successorHostPort),
+                        split.getPort(successorHostPort));
+                successorNode = new NodeRecord(successorHostPort, successorID, successorNickname, successorSocket);
+            } else {
+                successorNode = knownNodes.get(successorID);
+            }
 
             AskForSuccessor askForSuccessor = new AskForSuccessor();
             askForSuccessor.setOriginatorInformation(host + ":" + port + ":" + ID);
@@ -189,7 +204,8 @@ public class MessageProcessor {
         int originatorID = Integer.parseInt(requestOriginator[2]);
         String originatorHostPort = requestOriginator[0] + ":" + requestOriginator[1];
         if (knownNodes.get(originatorID) == null) {
-            knownNodes.put(originatorID, new NodeRecord(originatorHostPort, originatorID, requestOriginator[0],true));
+            knownNodes.put(originatorID, new NodeRecord(originatorHostPort, originatorID,
+                    requestOriginator[0],new Socket(requestOriginator[0], split.getPort(originatorHostPort))));
             fingerTableManagement.updateFingerTable(ID, parent.getFingerTable(), knownNodes);
             parent.setFingerTableModified(true);
         }

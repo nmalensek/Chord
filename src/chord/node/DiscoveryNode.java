@@ -5,7 +5,9 @@ import chord.transport.TCPSender;
 import chord.transport.TCPServerThread;
 
 import java.io.IOException;
+import java.net.Inet4Address;
 import java.net.Socket;
+import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.concurrent.ThreadLocalRandom;
@@ -61,7 +63,7 @@ public class DiscoveryNode implements Node {
     @Override
     public void onEvent(Event event, Socket destinationSocket) throws IOException {
         if (event instanceof NodeInformation) {
-            NodeRecord justRegisteredNode = constructNewNode(event);
+            NodeRecord justRegisteredNode = constructNewNode(event, destinationSocket);
             addNewNodeToOverlay(justRegisteredNode);
         } else if (event instanceof NodeLeaving) {
             handleNodeLeaving(((NodeLeaving) event).getSixteenBitID());
@@ -77,12 +79,13 @@ public class DiscoveryNode implements Node {
                 " (ID: " + removedNode.getIdentifier() + ") has left the overlay.");
     }
 
-    private synchronized NodeRecord constructNewNode(Event event) throws IOException {
+    private synchronized NodeRecord constructNewNode(Event event, Socket newSocket) throws IOException {
         String hostPort = ((NodeInformation) event).getHostPort();
         int identifier = ((NodeInformation) event).getSixteenBitID();
         String nickname = ((NodeInformation) event).getNickname();
+        NodeRecord newNode = new NodeRecord(hostPort, identifier, nickname, newSocket);
 
-        return new NodeRecord(hostPort, identifier, nickname, true);
+        return newNode;
     }
 
     /**
@@ -95,11 +98,19 @@ public class DiscoveryNode implements Node {
 
     @Override
     public void processText(String text) throws IOException {
+        switch (text) {
+            case "diagnostic":
+                for (NodeRecord peer : registeredPeers.values()) {
+                    System.out.println("ID: " + peer.getIdentifier() + "Host: " + peer.getHost() +
+                            "\tPort: " + peer.getPort());
+                }
+                break;
+        }
     }
 
-    public static void main(String[] args) {
-        discoveryHost = args[0];
-        discoveryPort = Integer.parseInt(args[1]);
+    public static void main(String[] args) throws UnknownHostException {
+        discoveryHost = Inet4Address.getLocalHost().getHostName();
+        discoveryPort = Integer.parseInt(args[0]);
 
         DiscoveryNode discoveryNode = new DiscoveryNode();
         discoveryNode.startup();

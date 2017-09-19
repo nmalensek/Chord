@@ -12,11 +12,15 @@ public class QuerySuccessorThread extends Thread {
 
     private Peer owner;
     private int queryInterval;
+    private String ownerHost;
+    private int ownerPort;
     TCPSender sender = new TCPSender();
 
-    public QuerySuccessorThread(Peer owner, int queryInterval) {
+    public QuerySuccessorThread(Peer owner, int queryInterval, String ownerHost, int ownerPort) {
         this.owner = owner;
         this.queryInterval = queryInterval;
+        this.ownerHost = ownerHost;
+        this.ownerPort = ownerPort;
     }
 
     private void queryOwnerSuccessor() {
@@ -26,6 +30,8 @@ public class QuerySuccessorThread extends Thread {
             sender.sendToSpecificSocket(successor.getNodeSocket(), query.getBytes());
         } catch (IOException e) {
             System.out.println("Could not contact successor, message was not sent.");
+        } catch (NullPointerException npe) {
+            System.out.println("Successor: " + ownerHost + ":" + ownerPort);
         }
 
     }

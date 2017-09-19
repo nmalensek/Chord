@@ -30,28 +30,30 @@ public class HandleNodeLeaving {
         this.knownNodes = knownNodes;
     }
 
-    public void processSuccessorLeaving(NodeLeaving leavingMessage) throws IOException {
+    public void processSuccessorLeaving(NodeLeaving leavingMessage, Socket oldSocket) throws IOException {
         String[] successorInfo = (leavingMessage.getSuccessorInfo().split(":"));
         NodeRecord newSuccessor = new NodeRecord(
                 successorInfo[0] + ":" + successorInfo[1],
                 Integer.parseInt(successorInfo[2]),
                 successorInfo[0],
-                true
+                oldSocket
         );
+        newSuccessor.setNodeSocket(new Socket(successorInfo[0], Integer.parseInt(successorInfo[1]))); //set new successor socket to new successor
         knownNodes.remove(leavingMessage.getSixteenBitID());
         knownNodes.putIfAbsent(newSuccessor.getIdentifier(), newSuccessor);
         AskForSuccessor askForSuccessor = new AskForSuccessor();
         sender.sendToSpecificSocket(newSuccessor.getNodeSocket(), askForSuccessor.getBytes());
     }
 
-    public void processPredecessorLeaving(NodeLeaving leavingMessage) throws IOException {
+    public void processPredecessorLeaving(NodeLeaving leavingMessage, Socket oldSocket) throws IOException {
         String[] predecessorInfo = (leavingMessage.getSuccessorInfo().split(":"));
         NodeRecord newPredecessor = new NodeRecord(
                 predecessorInfo[0] + ":" + predecessorInfo[1],
                 Integer.parseInt(predecessorInfo[2]),
                 predecessorInfo[0],
-                true
+                oldSocket
         );
+        newPredecessor.setNodeSocket(new Socket(predecessorInfo[0], Integer.parseInt(predecessorInfo[1]))); //set new predecessor socket to new predecessor
         knownNodes.remove(leavingMessage.getSixteenBitID());
         knownNodes.putIfAbsent(newPredecessor.getIdentifier(), newPredecessor);
         parent.setPredecessor(newPredecessor);

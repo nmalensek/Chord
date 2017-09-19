@@ -39,12 +39,14 @@ public class Peer implements Node {
     private HashMap<Integer, NodeRecord> knownNodes = new HashMap<>();
     private AtomicBoolean fingerTableModified = new AtomicBoolean();
     private AtomicBoolean filesResponsibleForModified = new AtomicBoolean();
+    private Socket thisNodeSocket = new Socket(peerHost, peerPort);
 
     public Peer() throws IOException {
         startThreads();
         setPort();
         connectToNetwork();
-        messageProcessor = new MessageProcessor(peerHost, peerPort, nodeIdentifier, this, knownNodes);
+        predecessor = new NodeRecord(peerHost + ":" + peerPort, nodeIdentifier, peerHost, thisNodeSocket);
+        messageProcessor = new MessageProcessor(peerHost, peerPort, nodeIdentifier, this, knownNodes, thisNodeSocket);
         handleNodeLeaving = new HandleNodeLeaving(peerHost, peerPort, nodeIdentifier, this, knownNodes);
         constructInitialFingerTable();
     }
@@ -56,7 +58,7 @@ public class Peer implements Node {
                 new DiagnosticPrinterThread(this, diagnosticInterval);
         diagnosticPrinterThread.start();
         QuerySuccessorThread querySuccessorThread =
-                new QuerySuccessorThread(this, queryInterval);
+                new QuerySuccessorThread(this, queryInterval, peerHost, peerPort);
         querySuccessorThread.start();
     }
 
@@ -76,7 +78,7 @@ public class Peer implements Node {
 
     private void constructInitialFingerTable() throws IOException {
         NodeRecord thisNode = new NodeRecord(peerHost + ":" + peerPort,
-                nodeIdentifier, Inet4Address.getLocalHost().getHostName(), false);
+                nodeIdentifier, Inet4Address.getLocalHost().getHostName(), thisNodeSocket);
         for (int i = 1; i < 17; i++) { //16-bit ID space, so all nodes have 16 FT entries.
             fingerTable.put(i, thisNode);
         }
@@ -111,15 +113,15 @@ public class Peer implements Node {
             } else if (event instanceof QueryResponse) {
                 QueryResponse queryResponseMessage = (QueryResponse) event;
                 if (queryResponseMessage.getPredecessorID() != nodeIdentifier) {
-                    updateSuccessor(queryResponseMessage);
+                    updateSuccessor(queryResponseMessage, destinationSocket);
                 }
             } else if (event instanceof UpdatePredecessor) {
-                messageProcessor.processPredecessorUpdate((UpdatePredecessor) event, filesResponsibleFor);
+                messageProcessor.processPredecessorUpdate((UpdatePredecessor) event, filesResponsibleFor, destinationSocket);
             } else if (event instanceof NodeLeaving) {
                 if (fingerTable.get(1).getIdentifier() == (((NodeLeaving) event).getSixteenBitID())) { //successor left
-                    handleNodeLeaving.processSuccessorLeaving((NodeLeaving) event);
+                    handleNodeLeaving.processSuccessorLeaving((NodeLeaving) event, destinationSocket);
                 } else {
-                    handleNodeLeaving.processPredecessorLeaving((NodeLeaving) event);
+                    handleNodeLeaving.processPredecessorLeaving((NodeLeaving) event, destinationSocket);
                 }
             } else if (event instanceof SuccessorInformation) {
                 messageProcessor.processSuccessorInformation((SuccessorInformation) event);
@@ -141,11 +143,11 @@ public class Peer implements Node {
         return queryResponse.getBytes();
     }
 
-    private void updateSuccessor(QueryResponse queryResponse) throws IOException {
+    private void updateSuccessor(QueryResponse queryResponse, Socket successorSocket) throws IOException {
         NodeRecord updatedSuccessor =
                 new NodeRecord(queryResponse.getPredecessorHostPort(),
                         queryResponse.getPredecessorID(),
-                        queryResponse.getPredecessorNickname(), true);
+                        queryResponse.getPredecessorNickname(), successorSocket);
         fingerTable.put(1, updatedSuccessor);
         fingerTableModified.set(true);
         Query queryNewSuccessor = new Query(); //check if this node is successor to new node
@@ -244,14 +246,18 @@ public class Peer implements Node {
         discoveryNodePort = Integer.parseInt(args[4]);
 
         if (args[0].equals("na")) {
-            nodeIdentifier = CreateIdentifier.createIdentifier(String.valueOf(System.currentTimeMillis()));
+            try {
+                nodeIdentifier = CreateIdentifier.createIdentifier(String.valueOf(System.currentTimeMillis()));
+
+            } catch (StringIndexOutOfBoundsException e) {
+                nodeIdentifier = CreateIdentifier.createIdentifier(String.valueOf(System.currentTimeMillis()));
+            }
         } else {
             nodeIdentifier = Integer.parseInt(args[0]);
         }
 
         try {
             Peer peer = new Peer();
-            peer.startThreads();
         } catch (IOException e) {
             e.printStackTrace();
         }

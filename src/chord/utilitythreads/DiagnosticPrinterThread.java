@@ -19,7 +19,7 @@ public class DiagnosticPrinterThread extends Thread {
 
     private void printDiagnostics() {
         checkForCurrentFingerTableAndPrint();
-        printSuccessorAndPredecessor();
+        printPredecessor();
         checkForCurrentFilesAndPrint();
     }
 
@@ -67,11 +67,9 @@ public class DiagnosticPrinterThread extends Thread {
         }
     }
 
-    private void printSuccessorAndPredecessor() {
-        NodeRecord successor = fingerTableCopy.get(1);
+    private void printPredecessor() {
         NodeRecord predecessor = owner.getPredecessor();
-        System.out.printf("Successor: " + successor.getIdentifier() + ":" + successor.getNickname());
-        System.out.println("Predecessor: " + predecessor.getIdentifier() + ":" + predecessor.getNickname());
+        System.out.println("Predecessor: " + predecessor.getIdentifier() + "\t" + predecessor.getNickname());
     }
 
     @Override

@@ -32,7 +32,7 @@ public class TCPReceiverThread extends Thread implements Protocol {
      **/
     public void run() {
         int dataLength;
-        while (!communicationSocket.isClosed()) {
+        while (communicationSocket != null) {
             try {
                 dataLength = dataInputStream.readInt();
 
@@ -42,7 +42,8 @@ public class TCPReceiverThread extends Thread implements Protocol {
                 determineMessageType(data);
 
             } catch (IOException ioe) {
-                ioe.printStackTrace();
+                System.out.println("Node at " + communicationSocket.getRemoteSocketAddress() + " unavailable, closing connection.");
+                communicationSocket = null;
             } catch (ClassNotFoundException e) {
                 e.printStackTrace();
             }
@@ -118,7 +119,7 @@ public class TCPReceiverThread extends Thread implements Protocol {
                 Event<SuccessorInformation> successorInformationEvent =
                         eventFactory.successorInformationEvent(marshalledBytes);
                 node.onEvent(successorInformationEvent, communicationSocket);
-                break;
+                    break;
             case EXIT_OVERLAY:
                 Event<NodeLeaving> nodeLeavingEvent =
                         eventFactory.nodeLeavingEvent(marshalledBytes);
