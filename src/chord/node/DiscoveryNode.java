@@ -3,6 +3,7 @@ package chord.node;
 import chord.messages.*;
 import chord.transport.TCPSender;
 import chord.transport.TCPServerThread;
+import chord.utilitythreads.TextInputThread;
 
 import java.io.IOException;
 import java.net.Inet4Address;
@@ -26,6 +27,8 @@ public class DiscoveryNode implements Node {
     private void startup() {
         TCPServerThread serverThread = new TCPServerThread(this, discoveryPort);
         serverThread.start();
+        TextInputThread textInputThread = new TextInputThread(this);
+        textInputThread.start();
     }
 
     private synchronized void addNewNodeToOverlay(NodeRecord newNode) throws IOException {
@@ -40,6 +43,7 @@ public class DiscoveryNode implements Node {
 
             NodeInformation messageWithRandomNode = prepareRandomNodeInfoMessage(randomNode);
             sender.sendToSpecificSocket(node.getNodeSocket(), messageWithRandomNode.getBytes());
+            System.out.println("sent node information to remote "  + node.getNodeSocket().getRemoteSocketAddress());
         } else {
             Collision collision = new Collision();
             sender.sendToSpecificSocket(node.getNodeSocket(), collision.getBytes());
@@ -72,11 +76,16 @@ public class DiscoveryNode implements Node {
         }
     }
 
-    private synchronized void handleNodeLeaving(int nodeID) {
+    private synchronized void handleNodeLeaving(int nodeID) throws IOException {
         NodeRecord removedNode = registeredPeers.remove(nodeID);
-        randomNodes.remove(removedNode.getIdentifier());
+        for (int i = 0; i < randomNodes.size(); i++) {
+            if (randomNodes.get(i) == nodeID) {
+                randomNodes.remove(i);
+            }
+        }
         System.out.println(removedNode.getNickname() +
                 " (ID: " + removedNode.getIdentifier() + ") has left the overlay.");
+        removedNode = null;
     }
 
     private synchronized NodeRecord constructNewNode(Event event, Socket newSocket) throws IOException {
@@ -99,10 +108,14 @@ public class DiscoveryNode implements Node {
     @Override
     public void processText(String text) throws IOException {
         switch (text) {
-            case "diagnostic":
-                for (NodeRecord peer : registeredPeers.values()) {
-                    System.out.println("ID: " + peer.getIdentifier() + "Host: " + peer.getHost() +
-                            "\tPort: " + peer.getPort());
+            case "d":
+                if (registeredPeers.size() == 0) {
+                    System.out.println("No nodes in overlay.");
+                } else {
+                    for (NodeRecord peer : registeredPeers.values()) {
+                        System.out.println("ID: " + peer.getIdentifier() + "\tHost: " + peer.getHost() +
+                                "\tPort: " + peer.getPort());
+                    }
                 }
                 break;
         }

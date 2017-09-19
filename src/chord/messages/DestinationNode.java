@@ -8,6 +8,7 @@ public class DestinationNode implements Protocol, Event {
     private int destinationID;
     private String hostPort;
     private String destinationNickname;
+    private String destinationPredecessor;
 
     public DestinationNode getType() {
         return this;
@@ -21,6 +22,9 @@ public class DestinationNode implements Protocol, Event {
 
     public String getDestinationNickname() { return destinationNickname; }
     public void setDestinationNickname(String destinationNickname) { this.destinationNickname = destinationNickname; }
+
+    public String getDestinationPredecessor() { return destinationPredecessor; }
+    public void setDestinationPredecessor(String destinationPredecessor) { this.destinationPredecessor = destinationPredecessor; }
 
     @Override
     public int getMessageType() {
@@ -46,6 +50,11 @@ public class DestinationNode implements Protocol, Event {
         int nickLength = destNickname.length;
         dataOutputStream.writeInt(nickLength);
         dataOutputStream.write(destNickname);
+
+        byte[] destinationPredecessorBytes = destinationPredecessor.getBytes();
+        int destinationPredecessorLength = destinationPredecessorBytes.length;
+        dataOutputStream.writeInt(destinationPredecessorLength);
+        dataOutputStream.write(destinationPredecessorBytes);
 
         dataOutputStream.flush();
         marshalledBytes = byteArrayOutputStream.toByteArray();
@@ -76,6 +85,12 @@ public class DestinationNode implements Protocol, Event {
         dataInputStream.readFully(nicknameBytes);
 
         destinationNickname = new String(nicknameBytes);
+
+        int destinationPredecessorLength = dataInputStream.readInt();
+        byte[] destinationPredecessorInfo = new byte[destinationPredecessorLength];
+        dataInputStream.readFully(destinationPredecessorInfo);
+
+        destinationPredecessor = new String(destinationPredecessorInfo);
 
         byteArrayInputStream.close();
         dataInputStream.close();

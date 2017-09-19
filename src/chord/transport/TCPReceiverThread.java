@@ -42,7 +42,6 @@ public class TCPReceiverThread extends Thread implements Protocol {
                 determineMessageType(data);
 
             } catch (IOException ioe) {
-                System.out.println("Node at " + communicationSocket.getRemoteSocketAddress() + " unavailable, closing connection.");
                 communicationSocket = null;
             } catch (ClassNotFoundException e) {
                 e.printStackTrace();
@@ -71,11 +70,6 @@ public class TCPReceiverThread extends Thread implements Protocol {
                 Event<NodeInformation> nodeInformationEvent =
                         eventFactory.nodeInformationEvent(marshalledBytes);
                 node.onEvent(nodeInformationEvent, communicationSocket);
-                break;
-            case ENTRANCE_SUCCESSFUL:
-                Event<NodeInformation> successfulEntranceEvent =
-                        eventFactory.successfulEntranceEvent(marshalledBytes);
-                node.onEvent(successfulEntranceEvent, communicationSocket);
                 break;
             case COLLISION:
                 Event<Collision> collisionEvent =

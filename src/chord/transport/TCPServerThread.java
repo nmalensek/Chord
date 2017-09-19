@@ -22,7 +22,7 @@ public class TCPServerThread extends Thread {
         this.portNum = portNum;
     }
 
-    public int getPortNumber() { return portNum; }
+    public int getPortNumber() { return serverSocket.getLocalPort(); }
 
     public void run() {
         try {

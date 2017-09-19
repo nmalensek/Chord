@@ -9,4 +9,8 @@ public class SplitHostPort {
     public int getPort(String hostPort) {
         return Integer.parseInt(hostPort.split(":")[1]);
     }
+
+    public int getID(String hostPortID) {
+        return Integer.parseInt(hostPortID.split(":")[2]);
+    }
 }

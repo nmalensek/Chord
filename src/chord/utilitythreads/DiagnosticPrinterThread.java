@@ -69,8 +69,11 @@ public class DiagnosticPrinterThread extends Thread {
 
     private void printPredecessor() {
         NodeRecord predecessor = owner.getPredecessor();
-        System.out.println("Predecessor: " + predecessor.getIdentifier() + "\t" + predecessor.getNickname());
+        System.out.println("Predecessor: " + predecessor.getIdentifier() +
+                "\t" + predecessor.getNickname() + "\t" + predecessor.getPort());
     }
+
+    //TODO print port in FT printout, find out why predecessor's ID is being set to its port sometimes
 
     @Override
     public void run() {

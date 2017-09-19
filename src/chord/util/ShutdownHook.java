@@ -33,10 +33,12 @@ public class ShutdownHook extends Thread {
         leaving.setSuccessorInfo(successor.getHost() + ":" + successor.getPort() + ":" + successor.getIdentifier());
         leaving.setPredecessorInfo(predecessor.getHost() + ":" + predecessor.getPort() + ":" + predecessor.getIdentifier());
         try {
-            sender.sendToSpecificSocket(successor.getNodeSocket(), leaving.getBytes());
-            sender.sendToSpecificSocket(predecessor.getNodeSocket(), leaving.getBytes());
+            if (successor.getNodeSocket() != null) {
+                sender.sendToSpecificSocket(successor.getNodeSocket(), leaving.getBytes());
+                sender.sendToSpecificSocket(predecessor.getNodeSocket(), leaving.getBytes());
+                owner.sendFilesToSuccessor();
+            }
             sender.sendToSpecificSocket(discoveryNodeSocket, leaving.getBytes());
-            owner.sendFilesToSuccessor();
         } catch (IOException e) {
             e.printStackTrace();
         }

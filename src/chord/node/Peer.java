@@ -3,12 +3,14 @@ package chord.node;
 import chord.messages.*;
 import chord.messages.messageprocessors.HandleNodeLeaving;
 import chord.messages.messageprocessors.MessageProcessor;
+import chord.transport.TCPReceiverThread;
 import chord.transport.TCPSender;
 import chord.transport.TCPServerThread;
 import chord.util.CreateIdentifier;
 import chord.utilitythreads.DiagnosticPrinterThread;
 import chord.utilitythreads.QuerySuccessorThread;
 import chord.util.ShutdownHook;
+import chord.utilitythreads.TextInputThread;
 
 import java.io.File;
 import java.io.IOException;
@@ -39,33 +41,46 @@ public class Peer implements Node {
     private HashMap<Integer, NodeRecord> knownNodes = new HashMap<>();
     private AtomicBoolean fingerTableModified = new AtomicBoolean();
     private AtomicBoolean filesResponsibleForModified = new AtomicBoolean();
-    private Socket thisNodeSocket = new Socket(peerHost, peerPort);
 
     public Peer() throws IOException {
-        startThreads();
-        setPort();
-        connectToNetwork();
-        predecessor = new NodeRecord(peerHost + ":" + peerPort, nodeIdentifier, peerHost, thisNodeSocket);
-        messageProcessor = new MessageProcessor(peerHost, peerPort, nodeIdentifier, this, knownNodes, thisNodeSocket);
-        handleNodeLeaving = new HandleNodeLeaving(peerHost, peerPort, nodeIdentifier, this, knownNodes);
         constructInitialFingerTable();
+        startServer();
+        startUtilityThreads();
+        predecessor = new NodeRecord(peerHost + ":" + peerPort, nodeIdentifier, peerHost, null);
+        messageProcessor = new MessageProcessor(peerHost, peerPort, nodeIdentifier, this, knownNodes, null);
+        handleNodeLeaving = new HandleNodeLeaving(peerHost, peerPort, nodeIdentifier, this, knownNodes);
+        connectToNetwork();
     }
 
-    private void startThreads() {
+    private void startServer() {
         serverThread = new TCPServerThread(this, 0);
+        System.out.println("ID:\t" + nodeIdentifier);
         serverThread.start();
+        setPort();
+    }
+
+    private void setPort() {
+        while (true) {
+            try {
+                peerPort = serverThread.getPortNumber();
+                break;
+            } catch (NullPointerException npe) {
+
+            }
+        }
+    }
+
+    private void startUtilityThreads() throws IOException {
+        TCPReceiverThread discoveryNodeReceiver = new TCPReceiverThread(discoveryNodeSocket, this);
+        discoveryNodeReceiver.start();
         DiagnosticPrinterThread diagnosticPrinterThread =
                 new DiagnosticPrinterThread(this, diagnosticInterval);
         diagnosticPrinterThread.start();
         QuerySuccessorThread querySuccessorThread =
                 new QuerySuccessorThread(this, queryInterval, peerHost, peerPort);
         querySuccessorThread.start();
-    }
-
-    private void setPort() {
-        while (serverThread.getPortNumber() == 0) {
-            peerPort = serverThread.getPortNumber();
-        }
+        TextInputThread textInputThread = new TextInputThread(this);
+        textInputThread.start();
     }
 
     private void connectToNetwork() throws IOException {
@@ -78,14 +93,14 @@ public class Peer implements Node {
 
     private void constructInitialFingerTable() throws IOException {
         NodeRecord thisNode = new NodeRecord(peerHost + ":" + peerPort,
-                nodeIdentifier, Inet4Address.getLocalHost().getHostName(), thisNodeSocket);
+                nodeIdentifier, Inet4Address.getLocalHost().getHostName(), null);
         for (int i = 1; i < 17; i++) { //16-bit ID space, so all nodes have 16 FT entries.
             fingerTable.put(i, thisNode);
         }
         fingerTableModified.set(true);
     }
 
-    private void addShutDownHook() {
+    private synchronized void addShutDownHook() {
         Runtime.getRuntime().addShutdownHook(new ShutdownHook(sender, this,
                 nodeIdentifier, discoveryNodeSocket));
     }
@@ -97,6 +112,7 @@ public class Peer implements Node {
                 NodeInformation information = (NodeInformation) event;
                 messageProcessor.processRegistration(information);
                 addShutDownHook();
+                System.out.println("Added shutdown hook");
             } else if (event instanceof Collision) {
                 System.out.println("This node's ID already exists in the overlay. Please enter a new one:");
                 promptForNewID();
@@ -220,10 +236,12 @@ public class Peer implements Node {
     @Override
     public void processText(String text) {
         switch (text) {
-            case "diagnostic":
+            case "d":
                 System.out.println("Finger table at this node:");
                 for (int key : fingerTable.keySet()) {
-                    System.out.println(key + "\t" + fingerTable.get(key));
+                    NodeRecord currentRow = fingerTable.get(key);
+                    System.out.println(key + "\t" + currentRow.getHost() + ":" + currentRow.getPort()
+                            + "\tID: " + currentRow.getIdentifier());
                 }
                 System.out.println("\nSuccessor and predecessor:");
                 System.out.println("Successor: " + fingerTable.get(1).getHost() + "(" + fingerTable.get(1).getIdentifier() + ")");
@@ -234,7 +252,7 @@ public class Peer implements Node {
                 }
                 break;
             default:
-                System.out.println("Valid commands are: diagnostic");
+                System.out.println("Valid commands are: d for diagnostics");
         }
     }
 
