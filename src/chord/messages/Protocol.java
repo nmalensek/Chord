@@ -14,4 +14,6 @@ public interface Protocol {
     int ASK_FOR_SUCCESSOR = 10;
     int SUCCESSOR_INFO = 11;
     int EXIT_OVERLAY = 99;
+    int TEST = 100;
+    int TEST_RESPONSE = 101;
 }

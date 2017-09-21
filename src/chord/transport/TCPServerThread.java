@@ -27,12 +27,12 @@ public class TCPServerThread extends Thread {
     public void run() {
         try {
             serverSocket = new ServerSocket(portNum);
-            portNum = serverSocket.getLocalPort();
             System.out.println("Server running on port " + serverSocket.getLocalPort() + "...");
 
             while(true) {
-//                pool.execute(new TCPReceiverThread(serverSocket.accept(), chord.messaging.node));
+//                pool.execute(new TCPReceiverThread(serverSocket.accept(), node));
                 new TCPReceiverThread(serverSocket.accept(), node).start();
+                System.out.println("A new client connected");
                 }
         } catch (IOException e) {
             e.printStackTrace();

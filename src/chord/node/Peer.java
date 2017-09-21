@@ -38,17 +38,17 @@ public class Peer implements Node {
     private Socket discoveryNodeSocket = new Socket(discoveryNodeHost, discoveryNodePort);
     private final HashMap<Integer, NodeRecord> fingerTable = new HashMap<>();
     private final HashMap<Integer, String> filesResponsibleFor = new HashMap<>();
-    private HashMap<Integer, NodeRecord> knownNodes = new HashMap<>();
+    private final HashMap<Integer, NodeRecord> knownNodes = new HashMap<>();
     private AtomicBoolean fingerTableModified = new AtomicBoolean();
     private AtomicBoolean filesResponsibleForModified = new AtomicBoolean();
 
     public Peer() throws IOException {
-        constructInitialFingerTable();
         startServer();
+        constructInitialFingerTable();
         startUtilityThreads();
         predecessor = new NodeRecord(peerHost + ":" + peerPort, nodeIdentifier, peerHost, null);
-        messageProcessor = new MessageProcessor(peerHost, peerPort, nodeIdentifier, this, knownNodes, null);
-        handleNodeLeaving = new HandleNodeLeaving(peerHost, peerPort, nodeIdentifier, this, knownNodes);
+        messageProcessor = new MessageProcessor(peerHost, peerPort, nodeIdentifier, this, null);
+        handleNodeLeaving = new HandleNodeLeaving(peerHost, peerPort, nodeIdentifier, this);
         connectToNetwork();
     }
 
@@ -63,7 +63,9 @@ public class Peer implements Node {
         while (true) {
             try {
                 peerPort = serverThread.getPortNumber();
-                break;
+                if (peerPort != 0) {
+                    break;
+                }
             } catch (NullPointerException npe) {
 
             }
@@ -119,47 +121,59 @@ public class Peer implements Node {
                 connectToNetwork();
             } else if (event instanceof DestinationNode) {
                 messageProcessor.processDestination((DestinationNode) event);
-                //create fingerTable
             } else if (event instanceof Lookup) {
                 messageProcessor.processLookup(((Lookup) event), predecessor);
             } else if (event instanceof FilePayload) {
-                messageProcessor.processPayload((FilePayload) event, filesResponsibleFor);
+//                messageProcessor.processPayload((FilePayload) event, filesResponsibleFor);
             } else if (event instanceof Query) {
-                sender.sendToSpecificSocket(destinationSocket, writeQueryResponse()); //send predecessor info
+                System.out.println("got a query");
+                if (predecessor.getNodeSocket() != null) {
+                    sender.sendToSpecificSocket(predecessor.getNodeSocket(), writeQueryResponse().getBytes()); //send predecessor info
+                    System.out.println("sent a response");
+                }
             } else if (event instanceof QueryResponse) {
+                System.out.println("entered on QueryResponse block");
                 QueryResponse queryResponseMessage = (QueryResponse) event;
+                System.out.println("got a response containing: " + queryResponseMessage.getPredecessorHostPort() + ":" +
+                        queryResponseMessage.getPredecessorID() + " so that means me = predecessor is " + (queryResponseMessage.getPredecessorID() == nodeIdentifier));
                 if (queryResponseMessage.getPredecessorID() != nodeIdentifier) {
+                    System.out.println("predecessor wasn't me :(");
                     updateSuccessor(queryResponseMessage, destinationSocket);
                 }
             } else if (event instanceof UpdatePredecessor) {
-                messageProcessor.processPredecessorUpdate((UpdatePredecessor) event, filesResponsibleFor, destinationSocket);
-            } else if (event instanceof NodeLeaving) {
-                if (fingerTable.get(1).getIdentifier() == (((NodeLeaving) event).getSixteenBitID())) { //successor left
-                    handleNodeLeaving.processSuccessorLeaving((NodeLeaving) event, destinationSocket);
-                } else {
-                    handleNodeLeaving.processPredecessorLeaving((NodeLeaving) event, destinationSocket);
-                }
-            } else if (event instanceof SuccessorInformation) {
-                messageProcessor.processSuccessorInformation((SuccessorInformation) event);
-            } else if (event instanceof AskForSuccessor) {
-                messageProcessor.sendSuccessorInformation(fingerTable.get(1), destinationSocket);
-                messageProcessor.checkIfUnknownNode((AskForSuccessor) event);
+                System.out.println("updating predecessor...");
+                messageProcessor.processPredecessorUpdate((UpdatePredecessor) event, filesResponsibleFor);
+//            } else if (event instanceof NodeLeaving) {
+//                if (fingerTable.get(1).getIdentifier() == (((NodeLeaving) event).getSixteenBitID())) { //successor left
+//                    handleNodeLeaving.processSuccessorLeaving((NodeLeaving) event, destinationSocket);
+//                } else {
+//                    handleNodeLeaving.processPredecessorLeaving((NodeLeaving) event, destinationSocket);
+//                }
+//            } else if (event instanceof SuccessorInformation) {
+//                System.out.println("got successor information");
+//                messageProcessor.processSuccessorInformation((SuccessorInformation) event);
+//            } else if (event instanceof AskForSuccessor) {
+//                System.out.println("got request for successor information");
+//                messageProcessor.sendSuccessorInformation(fingerTable.get(1), destinationSocket);
+//                messageProcessor.checkIfUnknownNode((AskForSuccessor) event);
             }
         } catch (IOException e) {
-            handleNodeLeaving.removeDeadNodeAndUpdateFT(destinationSocket);
+            e.printStackTrace();
+//            handleNodeLeaving.removeDeadNodeAndUpdateFT(destinationSocket);
         }
-
     }
 
-    private byte[] writeQueryResponse() throws IOException {
+    private synchronized QueryResponse writeQueryResponse() throws IOException {
         QueryResponse queryResponse = new QueryResponse();
         queryResponse.setPredecessorID(predecessor.getIdentifier());
         queryResponse.setPredecessorHostPort(predecessor.getHost() + ":" + predecessor.getPort());
         queryResponse.setPredecessorNickname(predecessor.getNickname());
-        return queryResponse.getBytes();
+        System.out.println(queryResponse.getPredecessorID() + "\t" + queryResponse.getPredecessorHostPort() + "\t"
+        + queryResponse.getMessageType());
+        return queryResponse;
     }
 
-    private void updateSuccessor(QueryResponse queryResponse, Socket successorSocket) throws IOException {
+    private synchronized void updateSuccessor(QueryResponse queryResponse, Socket successorSocket) throws IOException {
         NodeRecord updatedSuccessor =
                 new NodeRecord(queryResponse.getPredecessorHostPort(),
                         queryResponse.getPredecessorID(),
@@ -183,7 +197,7 @@ public class Peer implements Node {
         }
     }
 
-    private void promptForNewID() {
+    protected void promptForNewID() {
         Scanner userInput = new Scanner(System.in);
         try {
             nodeIdentifier = Integer.parseInt(userInput.nextLine());
@@ -217,6 +231,12 @@ public class Peer implements Node {
         }
     }
 
+    public HashMap<Integer, NodeRecord> getKnownNodes() {
+        synchronized (knownNodes) {
+            return knownNodes;
+        }
+    }
+
     public boolean isFingerTableModified() {
         return fingerTableModified.get();
     }
@@ -244,12 +264,17 @@ public class Peer implements Node {
                             + "\tID: " + currentRow.getIdentifier());
                 }
                 System.out.println("\nSuccessor and predecessor:");
-                System.out.println("Successor: " + fingerTable.get(1).getHost() + "(" + fingerTable.get(1).getIdentifier() + ")");
-                System.out.println("Predecessor: " + predecessor.getHost() + "(" + predecessor.getIdentifier() + ")");
+                System.out.println("Successor: " + fingerTable.get(1).getHost() + "(ID: " + fingerTable.get(1).getIdentifier() + ")");
+                System.out.println("Predecessor: " + predecessor.getHost() + "(ID: " + predecessor.getIdentifier() + ")");
                 System.out.println("\nFiles managed by this node:");
                 for (int key : filesResponsibleFor.keySet()) {
                     System.out.println(key + "\t" + filesResponsibleFor.get(key));
                 }
+                System.out.println("Known nodes: ");
+                for (int node : knownNodes.keySet()) {
+                    System.out.printf(knownNodes.get(node) + "\t");
+                }
+                System.out.println("");
                 break;
             default:
                 System.out.println("Valid commands are: d for diagnostics");

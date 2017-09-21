@@ -3,6 +3,8 @@ package chord.transport;
 import chord.eventfactory.EventFactory;
 import chord.messages.*;
 import chord.node.Node;
+import chord.test.TestMessage;
+import chord.test.TestResponse;
 
 import java.io.BufferedInputStream;
 import java.io.ByteArrayInputStream;
@@ -42,6 +44,7 @@ public class TCPReceiverThread extends Thread implements Protocol {
                 determineMessageType(data);
 
             } catch (IOException ioe) {
+                ioe.printStackTrace();
                 communicationSocket = null;
             } catch (ClassNotFoundException e) {
                 e.printStackTrace();
@@ -80,10 +83,12 @@ public class TCPReceiverThread extends Thread implements Protocol {
                 Event<Query> queryEvent =
                         eventFactory.queryEvent(marshalledBytes);
                 node.onEvent(queryEvent, communicationSocket);
+                break;
             case QUERY_RESPONSE:
                 Event<QueryResponse> queryResponseEvent =
                         eventFactory.queryResponseEvent(marshalledBytes);
                 node.onEvent(queryResponseEvent, communicationSocket);
+                break;
             case STORE_DATA_INQUIRY:
                 Event<StoreDataInquiry> storeDataInquiryEvent =
                         eventFactory.storeDataInquiryEvent(marshalledBytes);
@@ -113,7 +118,7 @@ public class TCPReceiverThread extends Thread implements Protocol {
                 Event<SuccessorInformation> successorInformationEvent =
                         eventFactory.successorInformationEvent(marshalledBytes);
                 node.onEvent(successorInformationEvent, communicationSocket);
-                    break;
+                break;
             case EXIT_OVERLAY:
                 Event<NodeLeaving> nodeLeavingEvent =
                         eventFactory.nodeLeavingEvent(marshalledBytes);
@@ -124,6 +129,16 @@ public class TCPReceiverThread extends Thread implements Protocol {
                 Event<FilePayload> filePayloadEvent =
                         eventFactory.filePayloadEvent(marshalledBytes);
                 node.onEvent(filePayloadEvent, communicationSocket);
+                break;
+            case TEST:
+                Event<TestMessage> testMessageEvent =
+                        eventFactory.testMessageEvent(marshalledBytes);
+                node.onEvent(testMessageEvent, communicationSocket);
+                break;
+            case TEST_RESPONSE:
+                Event<TestResponse> testResponseEvent =
+                        eventFactory.testResponseEvent(marshalledBytes);
+                node.onEvent(testResponseEvent, communicationSocket);
                 break;
             default:
                 System.out.println("Something went horribly wrong, please restart.");

@@ -19,15 +19,13 @@ public class HandleNodeLeaving {
     private int port;
     private int ID;
     private Peer parent;
-    private HashMap<Integer, NodeRecord> knownNodes;
     private FingerTableManagement fingerTableManagement = new FingerTableManagement();
 
-    public HandleNodeLeaving(String host, int port, int ID, Peer parent, HashMap<Integer, NodeRecord> knownNodes) {
+    public HandleNodeLeaving(String host, int port, int ID, Peer parent) {
         this.host = host;
         this.port = port;
         this.ID = ID;
         this.parent = parent;
-        this.knownNodes = knownNodes;
     }
 
     public void processSuccessorLeaving(NodeLeaving leavingMessage, Socket oldSocket) throws IOException {
@@ -39,8 +37,8 @@ public class HandleNodeLeaving {
                 oldSocket
         );
         newSuccessor.setNodeSocket(new Socket(successorInfo[0], Integer.parseInt(successorInfo[1]))); //set new successor socket to new successor
-        knownNodes.remove(leavingMessage.getSixteenBitID());
-        knownNodes.putIfAbsent(newSuccessor.getIdentifier(), newSuccessor);
+        parent.getKnownNodes().remove(leavingMessage.getSixteenBitID());
+        parent.getKnownNodes().putIfAbsent(newSuccessor.getIdentifier(), newSuccessor);
         AskForSuccessor askForSuccessor = new AskForSuccessor();
         sender.sendToSpecificSocket(newSuccessor.getNodeSocket(), askForSuccessor.getBytes());
     }
@@ -54,24 +52,24 @@ public class HandleNodeLeaving {
                 oldSocket
         );
         newPredecessor.setNodeSocket(new Socket(predecessorInfo[0], Integer.parseInt(predecessorInfo[1]))); //set new predecessor socket to new predecessor
-        knownNodes.remove(leavingMessage.getSixteenBitID());
-        knownNodes.putIfAbsent(newPredecessor.getIdentifier(), newPredecessor);
+        parent.getKnownNodes().remove(leavingMessage.getSixteenBitID());
+        parent.getKnownNodes().putIfAbsent(newPredecessor.getIdentifier(), newPredecessor);
         parent.setPredecessor(newPredecessor);
         AskForSuccessor askForSuccessor = new AskForSuccessor();
         sender.sendToSpecificSocket(parent.getFingerTable().get(1).getNodeSocket(), askForSuccessor.getBytes());
     }
 
     public void removeDeadNodeAndUpdateFT(Socket errorSocket) { //double check this, may not be able to compare sockets
-        for (NodeRecord node : knownNodes.values()) {
+        for (NodeRecord node : parent.getKnownNodes().values()) {
             if (node.getNodeSocket().equals(errorSocket)) {
-                knownNodes.remove(node.getIdentifier());
+                parent.getKnownNodes().remove(node.getIdentifier());
             }
         }
         try {
             AskForSuccessor askForSuccessor = new AskForSuccessor();
             sender.sendToSpecificSocket(parent.getFingerTable().get(1).getNodeSocket(), askForSuccessor.getBytes());
         } catch (IOException e) {
-            knownNodes.remove(parent.getFingerTable().get(1).getIdentifier()); //can't contact successor, find yourself again
+            parent.getKnownNodes().remove(parent.getFingerTable().get(1).getIdentifier()); //can't contact successor, find yourself again
             Lookup lookup = new Lookup();
             lookup.setPayloadID(ID);
             lookup.setRoutingPath(host + ":" + port + ",");

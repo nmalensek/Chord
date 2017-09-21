@@ -26,8 +26,10 @@ public class QuerySuccessorThread extends Thread {
     private void queryOwnerSuccessor() {
         try {
             NodeRecord successor = owner.getFingerTable().get(1);
+            System.out.println("Sending a message to " + successor.toString() + " and the socket is closed: " + successor.getNodeSocket().isClosed());
             Query query = new Query();
-            sender.sendToSpecificSocket(successor.getNodeSocket(), query.getBytes());
+            sender.sendToSpecificSocket(new Socket(successor.getHost(), successor.getPort()), query.getBytes());
+            System.out.println("sent a query");
         } catch (IOException e) {
             System.out.println("Could not contact successor, message was not sent.");
         } catch (NullPointerException npe) {

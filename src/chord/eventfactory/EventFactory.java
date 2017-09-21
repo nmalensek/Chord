@@ -1,6 +1,8 @@
 package chord.eventfactory;
 
 import chord.messages.*;
+import chord.test.TestMessage;
+import chord.test.TestResponse;
 
 import java.io.IOException;
 
@@ -23,13 +25,6 @@ public final class EventFactory {
         NodeInformation nodeInformation = new NodeInformation();
         nodeInformation.readMessage(marshalledBytes);
         return nodeInformation;
-    }
-
-    public static Event<NodeInformation> successfulEntranceEvent(
-            byte[] marshalledBytes) throws IOException {
-        NodeInformation successfulEntry = new NodeInformation();
-        successfulEntry.readMessage(marshalledBytes);
-        return successfulEntry;
     }
 
     public static Event<Query> queryEvent(
@@ -107,6 +102,20 @@ public final class EventFactory {
         FilePayload filePayload = new FilePayload();
         filePayload.readMessage(marshalledBytes);
         return filePayload;
+    }
+
+    public static Event<TestMessage> testMessageEvent(
+            byte[] marshalledBytes) throws IOException {
+        TestMessage testMessage = new TestMessage();
+        testMessage.readMessage(marshalledBytes);
+        return testMessage;
+    }
+
+    public static Event<TestResponse> testResponseEvent(
+            byte[] marshalledBytes) throws IOException {
+     TestResponse testResponse = new TestResponse();
+     testResponse.readMessage(marshalledBytes);
+     return testResponse;
     }
 
 }

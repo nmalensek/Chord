@@ -42,7 +42,7 @@ public class DiagnosticPrinterThread extends Thread {
             for (Integer key : fingerTableCopy.keySet()) {
                 NodeRecord currentRecord = fingerTableCopy.get(key);
                 System.out.printf(key + "\t" + currentRecord.getIdentifier()
-                        + "\t" + currentRecord.getNickname() + "\n");
+                        + "\t" + currentRecord.getNickname() + ":" + currentRecord.getPort() + "\n");
             }
     }
 
@@ -73,17 +73,17 @@ public class DiagnosticPrinterThread extends Thread {
                 "\t" + predecessor.getNickname() + "\t" + predecessor.getPort());
     }
 
-    //TODO print port in FT printout, find out why predecessor's ID is being set to its port sometimes
+    //TODO find out why predecessor's ID is being set to its port sometimes
 
     @Override
     public void run() {
-        try {
-            while (true) {
-                Thread.sleep(diagnosticInterval);
-                printDiagnostics();
-            }
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
+//        try {
+//            while (true) {
+//                Thread.sleep(diagnosticInterval);
+//                printDiagnostics();
+//            }
+//        } catch (InterruptedException e) {
+//            e.printStackTrace();
+//        }
     }
 }

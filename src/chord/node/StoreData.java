@@ -59,8 +59,8 @@ public class StoreData implements Node {
             file.setFileName(filePath.getFileName().toString());
             file.setFileToTransfer(new File(filePath.toString()));
             file.setSendingNodeHostPort(thisNodeHost + ":" + thisNodePort);
-            System.out.println("Sending file " + fileID + "to " + ((DestinationNode) event).getHostPort() + "\tID: "
-                    + ((DestinationNode) event).getDestinationID());
+            System.out.println("Sending file " + fileID + "to " + ((DestinationNode) event).getDestinationNode() + "\tID: "
+                    + ((DestinationNode) event).getDestinationNode());
 
             TCPSender sender = new TCPSender();
             sender.sendToSpecificSocket(destinationSocket, file.getBytes());

@@ -53,6 +53,6 @@ public class NodeRecord {
 
     @Override
     public String toString() {
-        return this.getNickname();
+        return this.getHost() + ":" + this.getPort() + ":" + this.getIdentifier();
     }
 }
