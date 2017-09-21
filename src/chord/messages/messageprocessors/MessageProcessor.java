@@ -101,16 +101,17 @@ public class MessageProcessor {
         String originatingHost = split.getHost(originatingNode);
         int originatingPort = split.getPort(originatingNode);
         int originatingID = split.getID(originatingNode);
-        Socket requestorSocket = checkIfKnown(originatingHost, originatingPort, originatingID);
+        int storeDataFlag = lookup.getStoreDataFlag();
+        Socket requestorSocket = checkIfKnown(originatingHost, originatingPort, originatingID, storeDataFlag);
 
         sender.sendToSpecificSocket(requestorSocket, thisNodeIsSink.getBytes());
         System.out.println("Routing: " + lookup.getRoutingPath() + " " + self.toString());
         System.out.println("Hops: " + (lookup.getNumHops() + 1));
     }
 
-    private synchronized Socket checkIfKnown(String originatingHost, int originatingPort, int originatingID) throws IOException {
+    private synchronized Socket checkIfKnown(String originatingHost, int originatingPort, int originatingID, int dataFlag) throws IOException {
         Socket socket;
-        if (parent.getKnownNodes().get(originatingID) == null) {
+        if (parent.getKnownNodes().get(originatingID) == null && dataFlag == 0) {
             socket = new Socket(originatingHost, originatingPort);
             NodeRecord node = new NodeRecord(originatingHost + ":" + originatingPort, originatingID, originatingHost, socket);
             parent.getKnownNodes().put(originatingID, node);

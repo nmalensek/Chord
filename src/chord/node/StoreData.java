@@ -53,6 +53,7 @@ public class StoreData implements Node {
             Lookup lookup = new Lookup();
             lookup.setPayloadID(fileID);
             lookup.setRoutingPath(thisNodeHost + ":" + thisNodePort + ",");
+            lookup.setStoreDataFlag(9999);
         } else if (event instanceof DestinationNode) {
             FilePayload file = new FilePayload();
             file.setFileID(fileID);
