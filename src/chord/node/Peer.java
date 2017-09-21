@@ -32,12 +32,15 @@ public class Peer implements Node {
     private static int discoveryNodePort;
     private static int queryInterval;
     private static int diagnosticInterval;
+    private static String storeDataHostPort;
     private TCPSender sender = new TCPSender();
     private TCPServerThread serverThread;
     private NodeRecord predecessor;
     private MessageProcessor messageProcessor;
     private HandleNodeLeaving handleNodeLeaving;
     private Socket discoveryNodeSocket = new Socket(discoveryNodeHost, discoveryNodePort);
+    private Socket storeDataSocket =
+            new Socket(storeDataHostPort.split(":")[0], Integer.parseInt(storeDataHostPort.split(":")[1]));
     private ConcurrentHashMap<Integer, NodeRecord> fingerTable = new ConcurrentHashMap<>();
     private ConcurrentHashMap<Integer, File> filesResponsibleFor = new ConcurrentHashMap<>();
     private ConcurrentHashMap<Integer, NodeRecord> knownNodes = new ConcurrentHashMap<>();
@@ -50,7 +53,7 @@ public class Peer implements Node {
         constructInitialFingerTable();
         startUtilityThreads();
         predecessor = new NodeRecord(peerHost + ":" + peerPort, nodeIdentifier, peerHost, null);
-        messageProcessor = new MessageProcessor(peerHost, peerPort, nodeIdentifier, this, null);
+        messageProcessor = new MessageProcessor(peerHost, peerPort, nodeIdentifier, this, null, storeDataSocket);
         handleNodeLeaving = new HandleNodeLeaving(peerHost, peerPort, nodeIdentifier, this);
         connectToNetwork();
     }
@@ -77,7 +80,9 @@ public class Peer implements Node {
 
     private void startUtilityThreads() throws IOException {
         TCPReceiverThread discoveryNodeReceiver = new TCPReceiverThread(discoveryNodeSocket, this);
+        TCPReceiverThread storeDataReceiver = new TCPReceiverThread(storeDataSocket, this);
         discoveryNodeReceiver.start();
+        storeDataReceiver.start();
         DiagnosticPrinterThread diagnosticPrinterThread =
                 new DiagnosticPrinterThread(this, diagnosticInterval);
         diagnosticPrinterThread.start();
@@ -127,7 +132,8 @@ public class Peer implements Node {
             } else if (event instanceof Lookup) {
                 messageProcessor.processLookup(((Lookup) event), predecessor);
             } else if (event instanceof FilePayload) {
-//                messageProcessor.processPayload((FilePayload) event, filesResponsibleFor);
+                System.out.println("got file payload");
+                messageProcessor.processPayload((FilePayload) event, filesResponsibleFor);
             } else if (event instanceof Query) {
                 if (predecessor.getNodeSocket() != null) {
                     Query query = (Query) event;
@@ -138,23 +144,17 @@ public class Peer implements Node {
                         Socket s = new Socket(senderHost, senderPort);
                         NodeRecord n = new NodeRecord(senderHost + ":" + senderPort, senderID, senderHost, s);
                         knownNodes.put(senderID, n);
-                        System.out.println("didn't know querier");
                     } else {
                         sender.sendToSpecificSocket(knownNodes.get(senderID).getNodeSocket(),
                                 writeQueryResponse().getBytes()); //send predecessor info
                     }
                 }
             } else if (event instanceof QueryResponse) {
-                System.out.println("entered on QueryResponse block");
                 QueryResponse queryResponseMessage = (QueryResponse) event;
-                System.out.println("got a response containing: " + queryResponseMessage.getPredecessorHostPort() + ":" +
-                        queryResponseMessage.getPredecessorID());
                 if (queryResponseMessage.getPredecessorID() != nodeIdentifier) {
-                    System.out.println("predecessor wasn't me :(");
                     messageProcessor.updateSuccessor(queryResponseMessage);
                 }
             } else if (event instanceof UpdatePredecessor) {
-                System.out.println("updating predecessor...");
                 messageProcessor.processPredecessorUpdate((UpdatePredecessor) event, filesResponsibleFor);
 //            } else if (event instanceof NodeLeaving) {
 //                if (fingerTable.get(1).getIdentifier() == (((NodeLeaving) event).getSixteenBitID())) { //successor left
@@ -163,10 +163,8 @@ public class Peer implements Node {
 //                    handleNodeLeaving.processPredecessorLeaving((NodeLeaving) event, destinationSocket);
 //                }
             } else if (event instanceof SuccessorInformation) {
-                System.out.println("got successor information");
                 messageProcessor.processSuccessorInformation((SuccessorInformation) event);
             } else if (event instanceof AskForSuccessor) {
-                System.out.println("got request for successor information");
                 messageProcessor.sendSuccessorInformation(fingerTable.get(1), (AskForSuccessor) event, null);
                 messageProcessor.checkIfUnknownNode((AskForSuccessor) event);
             }
@@ -278,11 +276,6 @@ public class Peer implements Node {
     }
 
     public static void main(String[] args) throws UnknownHostException {
-        peerHost = Inet4Address.getLocalHost().getHostName();
-        queryInterval = Integer.parseInt(args[1]);
-        diagnosticInterval = Integer.parseInt(args[2]);
-        discoveryNodeHost = args[3];
-        discoveryNodePort = Integer.parseInt(args[4]);
 
         if (args[0].equals("na")) {
             try {
@@ -294,6 +287,13 @@ public class Peer implements Node {
         } else {
             nodeIdentifier = Integer.parseInt(args[0]);
         }
+
+        peerHost = Inet4Address.getLocalHost().getHostName();
+        queryInterval = Integer.parseInt(args[1]);
+        diagnosticInterval = Integer.parseInt(args[2]);
+        discoveryNodeHost = args[3];
+        discoveryNodePort = Integer.parseInt(args[4]);
+        storeDataHostPort = args[5];
 
         try {
             Peer peer = new Peer();

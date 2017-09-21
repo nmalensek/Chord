@@ -32,7 +32,7 @@ public class TestFileReceiver implements Node{
         System.out.println("got a message");
         if (event instanceof FilePayload) {
             System.out.println("receiving file...");
-            ((FilePayload) event).writeFile(((FilePayload) event).getFileByteArray(), "1234567.jpg");
+            ((FilePayload) event).writeFile(((FilePayload) event).getFileByteArray(), "~/Desktop/1234567.jpg");
             System.out.println("file received");
         } else if (event instanceof Collision) {
             System.out.println("server message received");

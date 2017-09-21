@@ -4,6 +4,7 @@ import chord.messages.*;
 import chord.transport.TCPSender;
 import chord.transport.TCPServerThread;
 import chord.util.CreateIdentifier;
+import chord.util.SplitHostPort;
 import chord.utilitythreads.TextInputThread;
 
 import java.io.File;
@@ -21,6 +22,7 @@ public class StoreData implements Node {
     private static int thisNodePort;
     private TCPSender sender = new TCPSender();
     private Socket discoveryNodeSocket = new Socket(discoveryNodeHost, discoveryNodePort);
+    private SplitHostPort split = new SplitHostPort();
     private int fileID;
     private Path filePath;
     private File file;
@@ -35,11 +37,8 @@ public class StoreData implements Node {
     }
 
     private void startServerThread() {
-        TCPServerThread listener = new TCPServerThread(this, 0);
+        TCPServerThread listener = new TCPServerThread(this, thisNodePort);
         listener.start();
-        while (listener.getPortNumber() == 0) {
-            thisNodePort = listener.getPortNumber();
-        }
     }
 
     private void listenForTextInput() throws IOException {
@@ -50,17 +49,20 @@ public class StoreData implements Node {
     @Override
     public void onEvent(Event event, Socket destinationSocket) throws IOException {
         if (event instanceof NodeInformation) { //gets random peer from DiscoveryNode to send lookup message
+            System.out.println("got node information");
             Lookup lookup = new Lookup();
             lookup.setPayloadID(fileID);
-            lookup.setRoutingPath(thisNodeHost + ":" + thisNodePort + ",");
-            lookup.setStoreDataFlag(9999);
+            lookup.setRoutingPath(thisNodeHost + ":" + thisNodePort + ":" + 99999 + ",");
+            String lookupHostPort = ((NodeInformation) event).getHostPort();
+            Socket lookupSocket = new Socket(split.getHost(lookupHostPort), split.getPort(lookupHostPort));
+            sender.sendToSpecificSocket(lookupSocket, lookup.getBytes());
         } else if (event instanceof DestinationNode) {
             FilePayload file = new FilePayload();
             file.setFileID(fileID);
             file.setFileName(filePath.getFileName().toString());
             file.setFileToTransfer(new File(filePath.toString()));
             file.setSendingNodeHostPort(thisNodeHost + ":" + thisNodePort);
-            System.out.println("Sending file " + fileID + "to " + ((DestinationNode) event).getDestinationNode() + "\tID: "
+            System.out.println("Sending file " + fileID + " to " + ((DestinationNode) event).getDestinationNode() + "\tID: "
                     + ((DestinationNode) event).getDestinationNode());
 
             TCPSender sender = new TCPSender();
@@ -89,9 +91,13 @@ public class StoreData implements Node {
                     StoreDataInquiry inquiry = new StoreDataInquiry();
                     inquiry.setSixteenBitID(fileID);
                     sender.sendToSpecificSocket(discoveryNodeSocket, inquiry.getBytes());
-                } catch (StringIndexOutOfBoundsException | NumberFormatException s) {
+                } catch (StringIndexOutOfBoundsException | NumberFormatException | ArrayIndexOutOfBoundsException e) {
                     System.out.println("Could not generate ID from the supplied filename, please rename and try again");
+                    System.out.println("Usage: file [filePath] [optional fileID]");
                 }
+                break;
+            default:
+                System.out.println("Valid commands are: file [filePath] [optional fileID]");
                 break;
         }
 
@@ -100,6 +106,7 @@ public class StoreData implements Node {
     public static void main(String[] args) {
         discoveryNodeHost = args[0];
         discoveryNodePort = Integer.parseInt(args[1]);
+        thisNodePort = Integer.parseInt(args[2]);
 
         try {
             StoreData storeData = new StoreData();

@@ -7,7 +7,6 @@ public class Lookup implements Protocol, Event {
     private int payloadID;
     private int numHops;
     private String routingPath;
-    private int storeDataFlag;
 
     @Override
     public Lookup getType() { return this; }
@@ -24,9 +23,6 @@ public class Lookup implements Protocol, Event {
     public String getRoutingPath() { return routingPath; }
     public void setRoutingPath(String routingPath) { this.routingPath = routingPath; }
 
-    public int getStoreDataFlag() { return storeDataFlag; }
-    public void setStoreDataFlag(int storeDataFlag) { this.storeDataFlag = storeDataFlag; }
-
     //marshalls bytes
     public byte[] getBytes() throws IOException {
         byte[] marshalledBytes = null;
@@ -35,7 +31,6 @@ public class Lookup implements Protocol, Event {
                 new DataOutputStream(new BufferedOutputStream(byteArrayOutputStream));
 
         dataOutputStream.writeInt(messageType);
-        dataOutputStream.writeInt(storeDataFlag);
         dataOutputStream.writeInt(payloadID);
         dataOutputStream.writeInt(numHops);
 
@@ -60,7 +55,6 @@ public class Lookup implements Protocol, Event {
                 new DataInputStream(new BufferedInputStream(byteArrayInputStream));
 
         messageType = dataInputStream.readInt();
-        storeDataFlag = dataInputStream.readInt();
         payloadID = dataInputStream.readInt();
         numHops = dataInputStream.readInt();
 

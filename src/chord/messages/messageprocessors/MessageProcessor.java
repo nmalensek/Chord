@@ -24,15 +24,19 @@ public class MessageProcessor {
     private FingerTableManagement fingerTableManagement = new FingerTableManagement();
     private SplitHostPort split = new SplitHostPort();
     private Socket parentSocket;
+    private String storageDirectory = "/Users/nicholas/Desktop/";
+    private static int storeDataID = 99999;
+    private Socket storeDataSocket;
 
 
     public MessageProcessor(String host, int port, int ID,
-                            Peer parent, Socket parentSocket) throws IOException {
+                            Peer parent, Socket parentSocket, Socket storeDataSocket) throws IOException {
         this.host = host;
         this.port = port;
         this.ID = ID;
         this.parent = parent;
         this.parentSocket = parentSocket;
+        this.storeDataSocket = storeDataSocket;
         self = new NodeRecord(host + ":" + port, ID, host, parentSocket);
         parent.getKnownNodes().put(ID, self);
         parent.setPredecessor(self);
@@ -101,21 +105,22 @@ public class MessageProcessor {
         String originatingHost = split.getHost(originatingNode);
         int originatingPort = split.getPort(originatingNode);
         int originatingID = split.getID(originatingNode);
-        int storeDataFlag = lookup.getStoreDataFlag();
-        Socket requestorSocket = checkIfKnown(originatingHost, originatingPort, originatingID, storeDataFlag);
+        Socket requestorSocket = checkIfKnown(originatingHost, originatingPort, originatingID);
 
         sender.sendToSpecificSocket(requestorSocket, thisNodeIsSink.getBytes());
         System.out.println("Routing: " + lookup.getRoutingPath() + " " + self.toString());
         System.out.println("Hops: " + (lookup.getNumHops() + 1));
     }
 
-    private synchronized Socket checkIfKnown(String originatingHost, int originatingPort, int originatingID, int dataFlag) throws IOException {
+    private synchronized Socket checkIfKnown(String originatingHost, int originatingPort, int originatingID) throws IOException {
         Socket socket;
-        if (parent.getKnownNodes().get(originatingID) == null && dataFlag == 0) {
+        if (parent.getKnownNodes().get(originatingID) == null && originatingID != storeDataID) {
             socket = new Socket(originatingHost, originatingPort);
             NodeRecord node = new NodeRecord(originatingHost + ":" + originatingPort, originatingID, originatingHost, socket);
             parent.getKnownNodes().put(originatingID, node);
             fingerTableManagement.updateConcurrentFingerTable(ID, parent.getFingerTable(), parent.getKnownNodes());
+        } else if (originatingID == storeDataID) {
+            socket = storeDataSocket;
         } else {
             socket = parent.getKnownNodes().get(originatingID).getNodeSocket();
         }
@@ -261,21 +266,23 @@ public class MessageProcessor {
             parent.setFingerTableModified(true);
         }
     }
-//
-//    public synchronized void processPayload(FilePayload filePayload, HashMap<Integer, String> filesResponsibleFor) throws IOException {
-//        if (filesResponsibleFor.get(filePayload.getFileID()) != null) {
-//            filePayload.writeFile(filePayload.getFileByteArray(), "/tmp/" + filePayload.getFileName());
-//            synchronized (filesResponsibleFor) {
-//                filesResponsibleFor.put(filePayload.getFileID(), "/tmp/" + filePayload.getFileName());
-//            }
-//        } else {
-//            Collision collision = new Collision();
-//            String senderHost = filePayload.getSendingNodeHostPort().split(":")[0];
-//            int senderPort = Integer.parseInt(filePayload.getSendingNodeHostPort().split(":")[1]);
-//            Socket fileOwnerSocket = new Socket(senderHost, senderPort);
-//            sender.sendToSpecificSocket(fileOwnerSocket, collision.getBytes());
-//        }
-//    }
+
+    public synchronized void processPayload(FilePayload filePayload, ConcurrentHashMap<Integer, File> filesResponsibleFor) throws IOException {
+        if (filesResponsibleFor.get(filePayload.getFileID()) == null) {
+            System.out.println("storing file");
+            filePayload.writeFile(filePayload.getFileByteArray(), storageDirectory + filePayload.getFileName());
+            synchronized (filesResponsibleFor) {
+                filesResponsibleFor.put(filePayload.getFileID(), new File(storageDirectory + filePayload.getFileName()));
+            }
+            System.out.println("stored file");
+        } else {
+            Collision collision = new Collision();
+            String senderHost = filePayload.getSendingNodeHostPort().split(":")[0];
+            int senderPort = Integer.parseInt(filePayload.getSendingNodeHostPort().split(":")[1]);
+            Socket fileOwnerSocket = new Socket(senderHost, senderPort);
+            sender.sendToSpecificSocket(fileOwnerSocket, collision.getBytes());
+        }
+    }
 
     public synchronized void updateSuccessor(QueryResponse queryResponse) throws IOException {
         String newSuccessorHostPort = queryResponse.getPredecessorHostPort();

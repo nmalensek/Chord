@@ -3,6 +3,7 @@ package chord.utilitythreads;
 import chord.node.NodeRecord;
 import chord.node.Peer;
 
+import java.io.File;
 import java.util.HashMap;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -11,7 +12,7 @@ public class DiagnosticPrinterThread extends Thread {
     private Peer owner;
     private int diagnosticInterval;
     private ConcurrentHashMap<Integer, NodeRecord> fingerTableCopy = new ConcurrentHashMap<>();
-    private ConcurrentHashMap<Integer, String> responsibleFilesCopy = new ConcurrentHashMap<>();
+    private ConcurrentHashMap<Integer, File> responsibleFilesCopy = new ConcurrentHashMap<>();
 
     public DiagnosticPrinterThread(Peer owner, int diagnosticInterval) {
         this.owner = owner;

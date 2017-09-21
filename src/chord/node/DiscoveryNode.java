@@ -17,6 +17,8 @@ public class DiscoveryNode implements Node {
 
     private static String discoveryHost;
     private static int discoveryPort;
+    private static String storeDataHost;
+    private static int storeDataPort;
     private HashMap<Integer, NodeRecord> registeredPeers = new HashMap<>();
     private ArrayList<Integer> randomNodes = new ArrayList<>();
     private TCPSender sender = new TCPSender();
@@ -58,9 +60,10 @@ public class DiscoveryNode implements Node {
         return randomNodeInfo;
     }
 
-    private synchronized void respondToInquiry(Socket storeDataSocket) throws IOException {
+    private synchronized void respondToInquiry() throws IOException {
         NodeRecord randomNode = chooseRandomNode();
         NodeInformation nodeToContact = prepareRandomNodeInfoMessage(randomNode);
+        Socket storeDataSocket = new Socket(storeDataHost, storeDataPort);
         sender.sendToSpecificSocket(storeDataSocket, nodeToContact.getBytes());
     }
 
@@ -72,7 +75,7 @@ public class DiscoveryNode implements Node {
         } else if (event instanceof NodeLeaving) {
             handleNodeLeaving(((NodeLeaving) event).getSixteenBitID());
         } else if (event instanceof StoreDataInquiry) {
-            respondToInquiry(destinationSocket);
+            respondToInquiry();
         }
     }
 
@@ -124,6 +127,8 @@ public class DiscoveryNode implements Node {
     public static void main(String[] args) throws UnknownHostException {
         discoveryHost = Inet4Address.getLocalHost().getHostName();
         discoveryPort = Integer.parseInt(args[0]);
+        storeDataHost = args[1];
+        storeDataPort = Integer.parseInt(args[2]);
 
         DiscoveryNode discoveryNode = new DiscoveryNode();
         discoveryNode.startup();
