@@ -126,16 +126,14 @@ public class Peer implements Node {
             } else if (event instanceof FilePayload) {
 //                messageProcessor.processPayload((FilePayload) event, filesResponsibleFor);
             } else if (event instanceof Query) {
-                System.out.println("got a query");
                 if (predecessor.getNodeSocket() != null) {
                     sender.sendToSpecificSocket(predecessor.getNodeSocket(), writeQueryResponse().getBytes()); //send predecessor info
-                    System.out.println("sent a response");
                 }
             } else if (event instanceof QueryResponse) {
                 System.out.println("entered on QueryResponse block");
                 QueryResponse queryResponseMessage = (QueryResponse) event;
-                System.out.println("got a response containing: " + queryResponseMessage.getPredecessorHostPort() + ":" +
-                        queryResponseMessage.getPredecessorID() + " so that means me = predecessor is " + (queryResponseMessage.getPredecessorID() == nodeIdentifier));
+//                System.out.println("got a response containing: " + queryResponseMessage.getPredecessorHostPort() + ":" +
+//                        queryResponseMessage.getPredecessorID() + " so that means me = predecessor is " + (queryResponseMessage.getPredecessorID() == nodeIdentifier));
                 if (queryResponseMessage.getPredecessorID() != nodeIdentifier) {
                     System.out.println("predecessor wasn't me :(");
                     updateSuccessor(queryResponseMessage, destinationSocket);
@@ -149,8 +147,8 @@ public class Peer implements Node {
 //                } else {
 //                    handleNodeLeaving.processPredecessorLeaving((NodeLeaving) event, destinationSocket);
 //                }
-//            } else if (event instanceof SuccessorInformation) {
-//                System.out.println("got successor information");
+            } else if (event instanceof SuccessorInformation) {
+                System.out.println("got successor information");
 //                messageProcessor.processSuccessorInformation((SuccessorInformation) event);
 //            } else if (event instanceof AskForSuccessor) {
 //                System.out.println("got request for successor information");

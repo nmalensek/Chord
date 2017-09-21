@@ -38,7 +38,6 @@ public class MessageProcessor {
 
     public synchronized void processRegistration(NodeInformation information) throws IOException {
         if (information.getSixteenBitID() != ID) { //not first node in the ring so find out where to go
-            parent.getKnownNodes().remove(ID); //remove self from known nodes so FT is ok
             Lookup findLocation = new Lookup();
             findLocation.setRoutingPath(self.toString() + ",");
             findLocation.setPayloadID(ID);
@@ -68,9 +67,12 @@ public class MessageProcessor {
             } else if (smaller.getIdentifier() < payload && payload < larger.getIdentifier()) {
                 sendDestinationMessage(lookupEvent, larger.toString(), smaller.toString());
             }
-        } else if (successor.getIdentifier() > payload && predecessorID < payload) { //Successor is largest, send to there
+        } else if (successor.getIdentifier() >= payload && predecessorID < payload) { //Successor is largest, send to there
             forwardLookup(lookupEvent, successor);
-        } else {
+        } else if (successor.getIdentifier() >= payload && fingerTableManagement.predecessorIsLargest(parent.getKnownNodes(), predecessorID)) {
+            forwardLookup(lookupEvent, successor); //send to successor if predecessor's the largest node in the overlay
+        }
+        else {
             HashMap<Integer, NodeRecord> parentFingerTable = parent.getFingerTable();
             for (int key : parentFingerTable.keySet()) {
                 NodeRecord currentRow = parentFingerTable.get(key);
@@ -84,7 +86,6 @@ public class MessageProcessor {
                 }
             }
         }
-        parent.getKnownNodes().remove(ID); //know you're not the only one in the ring anymore, remove yourself
     }
 
     private synchronized void sendDestinationMessage(Lookup lookup, String successorHostPortID, String predecessorHostPortID) throws IOException {
@@ -92,8 +93,7 @@ public class MessageProcessor {
         thisNodeIsSink.setDestinationNode(successorHostPortID);
         thisNodeIsSink.setDestinationPredecessor(predecessorHostPortID);
         System.out.println("sent destination message with predecessor information of "
-        + thisNodeIsSink.getDestinationPredecessor() + "\nand successor information: " +
-                ":" + thisNodeIsSink.getDestinationNode());
+        + thisNodeIsSink.getDestinationPredecessor() + "\nand successor information: " + thisNodeIsSink.getDestinationNode());
 
         String originatingNode = lookup.getRoutingPath().split(",")[0];
         String originatingHost = split.getHost(originatingNode);
@@ -123,6 +123,7 @@ public class MessageProcessor {
         lookup.setRoutingPath(lookup.getRoutingPath() + self.toString() + ",");
         lookup.setNumHops((lookup.getNumHops() + 1));
         Socket successorSocket = forwardTarget.getNodeSocket();
+        System.out.println("Forwarding lookup message to " + forwardTarget);
         sender.sendToSpecificSocket(successorSocket, lookup.getBytes());
         System.out.println("Hops: " + lookup.getNumHops() + "\tfor id: " + lookup.getPayloadID());
     }
@@ -153,9 +154,7 @@ public class MessageProcessor {
         }
 
         UpdatePredecessor updatePredecessor = new UpdatePredecessor(); //tell successor to update its predecessor
-        updatePredecessor.setPredecessorID(ID);
-        updatePredecessor.setPredecessorHostPort(host + ":" + port);
-        updatePredecessor.setPredecessorNickname(host);
+        updatePredecessor.setPredecessorInfo(host + ":" + port + ":" + ID);
         sender.sendToSpecificSocket(successorNode.getNodeSocket(), updatePredecessor.getBytes());
 
         fingerTableManagement.updateFingerTable(ID, parent.getFingerTable(), parent.getKnownNodes());
@@ -163,19 +162,22 @@ public class MessageProcessor {
     }
 
     public synchronized void processPredecessorUpdate(UpdatePredecessor updatePredecessor, HashMap<Integer, String> fileHashMap) throws IOException {
-        String newPredecessorHostPort = updatePredecessor.getPredecessorHostPort();
-        int newPredecessorID = updatePredecessor.getPredecessorID();
-        String newPredecessorNickname = updatePredecessor.getPredecessorNickname();
-        Socket predecessorSocket = new Socket(split.getHost(newPredecessorHostPort), split.getPort(newPredecessorHostPort));
+        int predecessorID = split.getID(updatePredecessor.getPredecessorInfo());
+        String predecessorHost = split.getHost(updatePredecessor.getPredecessorInfo());
+        int predecessorPort = split.getPort(updatePredecessor.getPredecessorInfo());
+        String predecessorHostPort = split.getHostPort(updatePredecessor.getPredecessorInfo());
+
+        Socket predecessorSocket = new Socket(predecessorHost, predecessorPort);
         NodeRecord newPredecessor =
-                new NodeRecord(newPredecessorHostPort, newPredecessorID, newPredecessorNickname, predecessorSocket);
+                new NodeRecord(predecessorHostPort, predecessorID, predecessorHost, predecessorSocket);
+
         parent.setPredecessor(newPredecessor);
-        parent.getKnownNodes().putIfAbsent(newPredecessorID, newPredecessor);
+        parent.getKnownNodes().putIfAbsent(predecessorID, newPredecessor);
 
         fingerTableManagement.updateFingerTable(ID, parent.getFingerTable(), parent.getKnownNodes());
         parent.setFingerTableModified(true);
 
-//        if (parent.getKnownNodes().size() != 1) {
+//        if (parent.getKnownNodes().size() > 3) {
 //            NodeRecord successor = parent.getFingerTable().get(1); //tell new predecessor about your successor
 //            sendSuccessorInformation(successor, newPredecessor.getNodeSocket());
 //        }
@@ -199,13 +201,13 @@ public class MessageProcessor {
 //        }
     }
 
-//    public synchronized void sendSuccessorInformation(NodeRecord successor, Socket askerSocket) throws IOException {
-//        SuccessorInformation successorInformation = new SuccessorInformation();
-//        successorInformation.setSuccessorHostPort(successor.getHost() + ":" + successor.getPort());
-//        successorInformation.setSuccessorID(successor.getIdentifier());
-//        successorInformation.setSuccessorNickname(successor.getNickname());
-//        sender.sendToSpecificSocket(askerSocket, successorInformation.getBytes());
-//    }
+    public synchronized void sendSuccessorInformation(NodeRecord successor, Socket askerSocket) throws IOException {
+        SuccessorInformation successorInformation = new SuccessorInformation();
+        successorInformation.setSuccessorHostPort(successor.getHost() + ":" + successor.getPort());
+        successorInformation.setSuccessorID(successor.getIdentifier());
+        successorInformation.setSuccessorNickname(successor.getNickname());
+        sender.sendToSpecificSocket(askerSocket, successorInformation.getBytes());
+    }
 
 //    public synchronized void processSuccessorInformation(SuccessorInformation successorInformation) throws IOException {
 //        String successorHostPort = successorInformation.getSuccessorHostPort();

@@ -76,9 +76,7 @@ public class QueryTest implements Node {
         }
 
         UpdatePredecessor updatePredecessor = new UpdatePredecessor(); //tell successor to update its predecessor
-        updatePredecessor.setPredecessorID(nodeIdentifier);
-        updatePredecessor.setPredecessorHostPort(peerHost + ":" + peerPort);
-        updatePredecessor.setPredecessorNickname(peerHost);
+        updatePredecessor.setPredecessorInfo(peerHost + ":" + peerPort + ":" + nodeIdentifier);
         sender.sendToSpecificSocket(successorNode.getNodeSocket(), updatePredecessor.getBytes());
 
         fingerTableManagement.updateConcurrentFingerTable(nodeIdentifier, getFingerTable(), getKnownNodes());
@@ -126,7 +124,7 @@ public class QueryTest implements Node {
 //            }
         } else if (event instanceof UpdatePredecessor) {
             System.out.println("updating predecessor...");
-            processPredecessorUpdate((UpdatePredecessor) event, filesResponsibleFor, destinationSocket);
+            processPredecessorUpdate((UpdatePredecessor) event, filesResponsibleFor);
         } else if (event instanceof TestMessage) {
 //            System.out.println("got a test");
             TestResponse testResponse = new TestResponse();
@@ -332,16 +330,18 @@ public class QueryTest implements Node {
         }
     }
 
-    public synchronized void processPredecessorUpdate(UpdatePredecessor updatePredecessor, ConcurrentHashMap<Integer, String> fileHashMap,
-                                                      Socket predecessorSocket) throws IOException {
-        String newPredecessorHostPort = updatePredecessor.getPredecessorHostPort();
-        int newPredecessorID = updatePredecessor.getPredecessorID();
-        String newPredecessorNickname = updatePredecessor.getPredecessorNickname();
-        Socket testSocket = new Socket(split.getHost(newPredecessorHostPort), split.getPort(newPredecessorHostPort));
+    public synchronized void processPredecessorUpdate(UpdatePredecessor updatePredecessor, ConcurrentHashMap<Integer, String> fileHashMap) throws IOException {
+        int predecessorID = split.getID(updatePredecessor.getPredecessorInfo());
+        String predecessorHost = split.getHost(updatePredecessor.getPredecessorInfo());
+        int predecessorPort = split.getPort(updatePredecessor.getPredecessorInfo());
+        String predecessorHostPort = split.getHostPort(updatePredecessor.getPredecessorInfo());
+
+        Socket predecessorSocket = new Socket(predecessorHost, predecessorPort);
         NodeRecord newPredecessor =
-                new NodeRecord(newPredecessorHostPort, newPredecessorID, newPredecessorNickname, testSocket);
+                new NodeRecord(predecessorHostPort, predecessorID, predecessorHost, predecessorSocket);
+
         setPredecessor(newPredecessor);
-        getKnownNodes().putIfAbsent(newPredecessorID, newPredecessor);
+        getKnownNodes().putIfAbsent(predecessorID, newPredecessor);
 
         fingerTableManagement.updateConcurrentFingerTable(nodeIdentifier, getFingerTable(), getKnownNodes());
 

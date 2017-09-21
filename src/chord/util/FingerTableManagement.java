@@ -55,6 +55,16 @@ public class FingerTableManagement {
         }
     }
 
+    public synchronized boolean predecessorIsLargest(HashMap<Integer, NodeRecord> knownNodes, int predecessorID) {
+        int largest = predecessorID;
+        for (int id : knownNodes.keySet()) {
+            if (id > predecessorID) {
+                largest = id;
+            }
+        }
+        return largest == predecessorID;
+    }
+
     public synchronized void updateConcurrentFingerTable(int ID, ConcurrentHashMap<Integer, NodeRecord> fingerTable, ConcurrentHashMap<Integer, NodeRecord> knownNodes) {
         for (int i = 1; i < 17; i++) {
             int k = ID + (powersOfTwo.get(i)); //get the row value

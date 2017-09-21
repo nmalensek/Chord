@@ -4,22 +4,14 @@ import java.io.*;
 
 public class UpdatePredecessor implements Protocol, Event {
         private int messageType = UPDATE;
-        private int predecessorID;
-        private String predecessorHostPort;
-        private String predecessorNickname;
+        private String predecessorInfo;
 
         public UpdatePredecessor getType() { return this; }
 
-        public int getPredecessorID() { return predecessorID; }
-        public void setPredecessorID(int predecessorID) { this.predecessorID = predecessorID; }
+    public String getPredecessorInfo() { return predecessorInfo; }
+    public void setPredecessorInfo(String predecessorInfo) { this.predecessorInfo = predecessorInfo; }
 
-        public String getPredecessorHostPort() { return predecessorHostPort; }
-        public void setPredecessorHostPort(String predecessorHostPort) { this.predecessorHostPort = predecessorHostPort; }
-
-        public String getPredecessorNickname() { return predecessorNickname; }
-        public void setPredecessorNickname(String predecessorNickname) { this.predecessorNickname = predecessorNickname; }
-
-        @Override
+    @Override
         public int getMessageType() {
             return messageType;
         }
@@ -33,17 +25,10 @@ public class UpdatePredecessor implements Protocol, Event {
 
             dataOutputStream.writeInt(messageType);
 
-            dataOutputStream.writeInt(predecessorID);
-
-            byte[] hostPortBytes = predecessorHostPort.getBytes();
-            int hostPortLength = hostPortBytes.length;
-            dataOutputStream.writeInt(hostPortLength);
-            dataOutputStream.write(hostPortBytes);
-
-            byte[] nicknameBytes = predecessorNickname.getBytes();
-            int nicknameLength = nicknameBytes.length;
-            dataOutputStream.writeInt(nicknameLength);
-            dataOutputStream.write(nicknameBytes);
+            byte[] predecessorBytes = predecessorInfo.getBytes();
+            int predecessorLength = predecessorBytes.length;
+            dataOutputStream.writeInt(predecessorLength);
+            dataOutputStream.write(predecessorBytes);
 
             dataOutputStream.flush();
             marshalledBytes = byteArrayOutputStream.toByteArray();
@@ -62,19 +47,11 @@ public class UpdatePredecessor implements Protocol, Event {
 
             messageType = dataInputStream.readInt();
 
-            predecessorID = dataInputStream.readInt();
+            int predecessorLength = dataInputStream.readInt();
+            byte[] predecessorBytes = new byte[predecessorLength];
+            dataInputStream.readFully(predecessorBytes);
 
-            int hostPortLength = dataInputStream.readInt();
-            byte[] hostPortBytes = new byte[hostPortLength];
-            dataInputStream.readFully(hostPortBytes);
-
-            predecessorHostPort = new String(hostPortBytes);
-
-            int nicknameLength = dataInputStream.readInt();
-            byte[] nicknameBytes = new byte[nicknameLength];
-            dataInputStream.readFully(nicknameBytes);
-
-            predecessorNickname = new String(nicknameBytes);
+            predecessorInfo = new String(predecessorBytes);
 
             byteArrayInputStream.close();
             dataInputStream.close();
