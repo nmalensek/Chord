@@ -39,7 +39,7 @@ public class Peer implements Node {
     private HandleNodeLeaving handleNodeLeaving;
     private Socket discoveryNodeSocket = new Socket(discoveryNodeHost, discoveryNodePort);
     private ConcurrentHashMap<Integer, NodeRecord> fingerTable = new ConcurrentHashMap<>();
-    private ConcurrentHashMap<Integer, String> filesResponsibleFor = new ConcurrentHashMap<>();
+    private ConcurrentHashMap<Integer, File> filesResponsibleFor = new ConcurrentHashMap<>();
     private ConcurrentHashMap<Integer, NodeRecord> knownNodes = new ConcurrentHashMap<>();
     private AtomicBoolean fingerTableModified = new AtomicBoolean();
     private AtomicBoolean filesResponsibleForModified = new AtomicBoolean();
@@ -164,11 +164,11 @@ public class Peer implements Node {
 //                }
             } else if (event instanceof SuccessorInformation) {
                 System.out.println("got successor information");
-//                messageProcessor.processSuccessorInformation((SuccessorInformation) event);
-//            } else if (event instanceof AskForSuccessor) {
-//                System.out.println("got request for successor information");
-//                messageProcessor.sendSuccessorInformation(fingerTable.get(1), destinationSocket);
-//                messageProcessor.checkIfUnknownNode((AskForSuccessor) event);
+                messageProcessor.processSuccessorInformation((SuccessorInformation) event);
+            } else if (event instanceof AskForSuccessor) {
+                System.out.println("got request for successor information");
+                messageProcessor.sendSuccessorInformation(fingerTable.get(1), (AskForSuccessor) event, null);
+                messageProcessor.checkIfUnknownNode((AskForSuccessor) event);
             }
         } catch (IOException e) {
             e.printStackTrace();
@@ -190,8 +190,8 @@ public class Peer implements Node {
         for (int fileKey : filesResponsibleFor.keySet()) {
             FilePayload file = new FilePayload();
             file.setFileID(fileKey);
-            file.setFileName(filesResponsibleFor.get(fileKey).substring(5, filesResponsibleFor.get(fileKey).length()));
-            file.setFileToTransfer(new File(filesResponsibleFor.get(fileKey)));
+            file.setFileName(filesResponsibleFor.get(fileKey).getName());
+            file.setFileToTransfer(filesResponsibleFor.get(fileKey));
             System.out.println("Sending file " + fileKey + " to " + fingerTable.get(1).getNickname() + "\tID: "
                     + fingerTable.get(1).getIdentifier());
             TCPSender sender = new TCPSender();
@@ -210,7 +210,7 @@ public class Peer implements Node {
     }
 
     public ConcurrentHashMap<Integer, NodeRecord> getFingerTable() { return fingerTable; }
-    public ConcurrentHashMap<Integer, String> getFilesResponsibleFor() { return filesResponsibleFor; }
+    public ConcurrentHashMap<Integer, File> getFilesResponsibleFor() { return filesResponsibleFor; }
     public ConcurrentHashMap<Integer, NodeRecord> getKnownNodes() { return knownNodes; }
 
     public NodeRecord getPredecessor() {
