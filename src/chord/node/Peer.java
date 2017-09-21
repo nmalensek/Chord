@@ -7,6 +7,7 @@ import chord.transport.TCPReceiverThread;
 import chord.transport.TCPSender;
 import chord.transport.TCPServerThread;
 import chord.util.CreateIdentifier;
+import chord.util.SplitHostPort;
 import chord.utilitythreads.DiagnosticPrinterThread;
 import chord.utilitythreads.QuerySuccessorThread;
 import chord.util.ShutdownHook;
@@ -19,6 +20,7 @@ import java.net.Socket;
 import java.net.UnknownHostException;
 import java.util.HashMap;
 import java.util.Scanner;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 public class Peer implements Node {
@@ -36,11 +38,12 @@ public class Peer implements Node {
     private MessageProcessor messageProcessor;
     private HandleNodeLeaving handleNodeLeaving;
     private Socket discoveryNodeSocket = new Socket(discoveryNodeHost, discoveryNodePort);
-    private final HashMap<Integer, NodeRecord> fingerTable = new HashMap<>();
-    private final HashMap<Integer, String> filesResponsibleFor = new HashMap<>();
-    private final HashMap<Integer, NodeRecord> knownNodes = new HashMap<>();
+    private ConcurrentHashMap<Integer, NodeRecord> fingerTable = new ConcurrentHashMap<>();
+    private ConcurrentHashMap<Integer, String> filesResponsibleFor = new ConcurrentHashMap<>();
+    private ConcurrentHashMap<Integer, NodeRecord> knownNodes = new ConcurrentHashMap<>();
     private AtomicBoolean fingerTableModified = new AtomicBoolean();
     private AtomicBoolean filesResponsibleForModified = new AtomicBoolean();
+    private SplitHostPort split = new SplitHostPort();
 
     public Peer() throws IOException {
         startServer();
@@ -79,7 +82,7 @@ public class Peer implements Node {
                 new DiagnosticPrinterThread(this, diagnosticInterval);
         diagnosticPrinterThread.start();
         QuerySuccessorThread querySuccessorThread =
-                new QuerySuccessorThread(this, queryInterval, peerHost, peerPort);
+                new QuerySuccessorThread(this, queryInterval, peerHost, peerPort, nodeIdentifier);
         querySuccessorThread.start();
         TextInputThread textInputThread = new TextInputThread(this);
         textInputThread.start();
@@ -127,16 +130,28 @@ public class Peer implements Node {
 //                messageProcessor.processPayload((FilePayload) event, filesResponsibleFor);
             } else if (event instanceof Query) {
                 if (predecessor.getNodeSocket() != null) {
-                    sender.sendToSpecificSocket(predecessor.getNodeSocket(), writeQueryResponse().getBytes()); //send predecessor info
+                    Query query = (Query) event;
+                    String senderHost = split.getHost(query.getSenderInfo());
+                    int senderPort = split.getPort(query.getSenderInfo());
+                    int senderID = split.getID(query.getSenderInfo());
+                    if (knownNodes.get(senderID) == null) {
+                        Socket s = new Socket(senderHost, senderPort);
+                        NodeRecord n = new NodeRecord(senderHost + ":" + senderPort, senderID, senderHost, s);
+                        knownNodes.put(senderID, n);
+                        System.out.println("didn't know querier");
+                    } else {
+                        sender.sendToSpecificSocket(knownNodes.get(senderID).getNodeSocket(),
+                                writeQueryResponse().getBytes()); //send predecessor info
+                    }
                 }
             } else if (event instanceof QueryResponse) {
                 System.out.println("entered on QueryResponse block");
                 QueryResponse queryResponseMessage = (QueryResponse) event;
-//                System.out.println("got a response containing: " + queryResponseMessage.getPredecessorHostPort() + ":" +
-//                        queryResponseMessage.getPredecessorID() + " so that means me = predecessor is " + (queryResponseMessage.getPredecessorID() == nodeIdentifier));
+                System.out.println("got a response containing: " + queryResponseMessage.getPredecessorHostPort() + ":" +
+                        queryResponseMessage.getPredecessorID());
                 if (queryResponseMessage.getPredecessorID() != nodeIdentifier) {
                     System.out.println("predecessor wasn't me :(");
-                    updateSuccessor(queryResponseMessage, destinationSocket);
+                    messageProcessor.updateSuccessor(queryResponseMessage);
                 }
             } else if (event instanceof UpdatePredecessor) {
                 System.out.println("updating predecessor...");
@@ -171,17 +186,6 @@ public class Peer implements Node {
         return queryResponse;
     }
 
-    private synchronized void updateSuccessor(QueryResponse queryResponse, Socket successorSocket) throws IOException {
-        NodeRecord updatedSuccessor =
-                new NodeRecord(queryResponse.getPredecessorHostPort(),
-                        queryResponse.getPredecessorID(),
-                        queryResponse.getPredecessorNickname(), successorSocket);
-        fingerTable.put(1, updatedSuccessor);
-        fingerTableModified.set(true);
-        Query queryNewSuccessor = new Query(); //check if this node is successor to new node
-        sender.sendToSpecificSocket(updatedSuccessor.getNodeSocket(), queryNewSuccessor.getBytes());
-    }
-
     public void sendFilesToSuccessor() throws IOException {
         for (int fileKey : filesResponsibleFor.keySet()) {
             FilePayload file = new FilePayload();
@@ -205,17 +209,9 @@ public class Peer implements Node {
         }
     }
 
-    public HashMap<Integer, NodeRecord> getFingerTable() {
-        synchronized (fingerTable) {
-            return fingerTable;
-        }
-    }
-
-    public HashMap<Integer, String> getFilesResponsibleFor() {
-        synchronized (filesResponsibleFor) {
-            return filesResponsibleFor;
-        }
-    }
+    public ConcurrentHashMap<Integer, NodeRecord> getFingerTable() { return fingerTable; }
+    public ConcurrentHashMap<Integer, String> getFilesResponsibleFor() { return filesResponsibleFor; }
+    public ConcurrentHashMap<Integer, NodeRecord> getKnownNodes() { return knownNodes; }
 
     public NodeRecord getPredecessor() {
         synchronized (predecessor) {
@@ -226,12 +222,6 @@ public class Peer implements Node {
     public void setPredecessor(NodeRecord newPredecessor) {
         synchronized (predecessor) {
             this.predecessor = newPredecessor;
-        }
-    }
-
-    public HashMap<Integer, NodeRecord> getKnownNodes() {
-        synchronized (knownNodes) {
-            return knownNodes;
         }
     }
 
@@ -273,6 +263,14 @@ public class Peer implements Node {
                     System.out.printf(knownNodes.get(node) + "\t");
                 }
                 System.out.println("");
+                break;
+            case "s":
+                for (int node : knownNodes.keySet()) {
+                    System.out.print(knownNodes.get(node).toString() + " ");
+                    if (knownNodes.get(node).getIdentifier() != nodeIdentifier) {
+                        System.out.println(knownNodes.get(node).getNodeSocket().isClosed());
+                    }
+                }
                 break;
             default:
                 System.out.println("Valid commands are: d for diagnostics");

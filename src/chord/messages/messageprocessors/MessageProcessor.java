@@ -10,6 +10,7 @@ import chord.util.SplitHostPort;
 import java.io.IOException;
 import java.net.Socket;
 import java.util.HashMap;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class MessageProcessor {
 
@@ -69,11 +70,11 @@ public class MessageProcessor {
             }
         } else if (successor.getIdentifier() >= payload && predecessorID < payload) { //Successor is largest, send to there
             forwardLookup(lookupEvent, successor);
-        } else if (successor.getIdentifier() >= payload && fingerTableManagement.predecessorIsLargest(parent.getKnownNodes(), predecessorID)) {
+        } else if (successor.getIdentifier() >= payload && fingerTableManagement.predecessorIsLargestConcurrent(parent.getKnownNodes(), predecessorID)) {
             forwardLookup(lookupEvent, successor); //send to successor if predecessor's the largest node in the overlay
         }
         else {
-            HashMap<Integer, NodeRecord> parentFingerTable = parent.getFingerTable();
+            ConcurrentHashMap<Integer, NodeRecord> parentFingerTable = parent.getFingerTable();
             for (int key : parentFingerTable.keySet()) {
                 NodeRecord currentRow = parentFingerTable.get(key);
                 NodeRecord nextRow = parentFingerTable.get(key + 1);
@@ -112,7 +113,7 @@ public class MessageProcessor {
             socket = new Socket(originatingHost, originatingPort);
             NodeRecord node = new NodeRecord(originatingHost + ":" + originatingPort, originatingID, originatingHost, socket);
             parent.getKnownNodes().put(originatingID, node);
-            fingerTableManagement.updateFingerTable(ID, parent.getFingerTable(), parent.getKnownNodes());
+            fingerTableManagement.updateConcurrentFingerTable(ID, parent.getFingerTable(), parent.getKnownNodes());
         } else {
             socket = parent.getKnownNodes().get(originatingID).getNodeSocket();
         }
@@ -157,11 +158,11 @@ public class MessageProcessor {
         updatePredecessor.setPredecessorInfo(host + ":" + port + ":" + ID);
         sender.sendToSpecificSocket(successorNode.getNodeSocket(), updatePredecessor.getBytes());
 
-        fingerTableManagement.updateFingerTable(ID, parent.getFingerTable(), parent.getKnownNodes());
-        fingerTableManagement.printFingerTable(parent.getFingerTable());
+        fingerTableManagement.updateConcurrentFingerTable(ID, parent.getFingerTable(), parent.getKnownNodes());
+        fingerTableManagement.printConcurrentFingerTable(parent.getFingerTable());
     }
 
-    public synchronized void processPredecessorUpdate(UpdatePredecessor updatePredecessor, HashMap<Integer, String> fileHashMap) throws IOException {
+    public synchronized void processPredecessorUpdate(UpdatePredecessor updatePredecessor, ConcurrentHashMap<Integer, String> fileHashMap) throws IOException {
         int predecessorID = split.getID(updatePredecessor.getPredecessorInfo());
         String predecessorHost = split.getHost(updatePredecessor.getPredecessorInfo());
         int predecessorPort = split.getPort(updatePredecessor.getPredecessorInfo());
@@ -174,7 +175,7 @@ public class MessageProcessor {
         parent.setPredecessor(newPredecessor);
         parent.getKnownNodes().putIfAbsent(predecessorID, newPredecessor);
 
-        fingerTableManagement.updateFingerTable(ID, parent.getFingerTable(), parent.getKnownNodes());
+        fingerTableManagement.updateConcurrentFingerTable(ID, parent.getFingerTable(), parent.getKnownNodes());
         parent.setFingerTableModified(true);
 
 //        if (parent.getKnownNodes().size() > 3) {
@@ -262,4 +263,20 @@ public class MessageProcessor {
 //            sender.sendToSpecificSocket(fileOwnerSocket, collision.getBytes());
 //        }
 //    }
+
+    public synchronized void updateSuccessor(QueryResponse queryResponse) throws IOException {
+        String newSuccessorHostPort = queryResponse.getPredecessorHostPort();
+        Socket newSuccessorSocket = new Socket(split.getHost(newSuccessorHostPort), split.getPort(newSuccessorHostPort));
+        NodeRecord updatedSuccessor =
+                new NodeRecord(queryResponse.getPredecessorHostPort(),
+                        queryResponse.getPredecessorID(),
+                        queryResponse.getPredecessorNickname(), newSuccessorSocket);
+        parent.getKnownNodes().put(queryResponse.getPredecessorID(), updatedSuccessor);
+        parent.getFingerTable().put(queryResponse.getPredecessorID(), updatedSuccessor);
+        fingerTableManagement.updateConcurrentFingerTable(ID, parent.getFingerTable(), parent.getKnownNodes());
+        parent.setFingerTableModified(true);
+        //don't necessarily have to do below unless we need to update overlay super fast
+//        Query queryNewSuccessor = new Query(); //check if this node is successor to new node
+//        sender.sendToSpecificSocket(updatedSuccessor.getNodeSocket(), queryNewSuccessor.getBytes());
+    }
 }

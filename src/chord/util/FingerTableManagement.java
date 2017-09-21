@@ -99,4 +99,14 @@ public class FingerTableManagement {
             System.out.println(i + "\t" + fingerTable.get(i).toString());
         }
     }
+
+    public synchronized boolean predecessorIsLargestConcurrent(ConcurrentHashMap<Integer, NodeRecord> knownNodes, int predecessorID) {
+        int largest = predecessorID;
+        for (int id : knownNodes.keySet()) {
+            if (id > predecessorID) {
+                largest = id;
+            }
+        }
+        return largest == predecessorID;
+    }
 }

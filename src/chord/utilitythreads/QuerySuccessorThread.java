@@ -14,21 +14,24 @@ public class QuerySuccessorThread extends Thread {
     private int queryInterval;
     private String ownerHost;
     private int ownerPort;
+    private int ownerID;
     TCPSender sender = new TCPSender();
 
-    public QuerySuccessorThread(Peer owner, int queryInterval, String ownerHost, int ownerPort) {
+    public QuerySuccessorThread(Peer owner, int queryInterval, String ownerHost, int ownerPort, int ownerID) {
         this.owner = owner;
         this.queryInterval = queryInterval;
         this.ownerHost = ownerHost;
         this.ownerPort = ownerPort;
+        this.ownerID = ownerID;
     }
 
     private void queryOwnerSuccessor() {
         try {
             NodeRecord successor = owner.getFingerTable().get(1);
             Query query = new Query();
+            query.setSenderInfo(ownerHost + ":" + ownerPort + ":" + ownerID);
             sender.sendToSpecificSocket(successor.getNodeSocket(), query.getBytes());
-            System.out.println("Sent a message to " + successor.toString() + " and the socket is closed: " + successor.getNodeSocket().isClosed());
+            System.out.println("Sent a message to " + successor.toString());
 //            System.out.println("sent a query");
         } catch (IOException e) {
             System.out.println("Could not contact successor, message was not sent.");

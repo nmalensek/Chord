@@ -4,10 +4,14 @@ import java.io.*;
 
 public class Query implements Protocol, Event {
     private int messageType = QUERY;
+    private String senderInfo;
 
     public Query getType() {
         return this;
     }
+
+    public String getSenderInfo() { return senderInfo; }
+    public void setSenderInfo(String senderInfo) { this.senderInfo = senderInfo; }
 
     @Override
     public int getMessageType() {
@@ -22,6 +26,11 @@ public class Query implements Protocol, Event {
                 new DataOutputStream(new BufferedOutputStream(byteArrayOutputStream));
 
         dataOutputStream.writeInt(messageType);
+
+        byte[] senderInfoBytes = senderInfo.getBytes();
+        int senderInfoLength = senderInfoBytes.length;
+        dataOutputStream.writeInt(senderInfoLength);
+        dataOutputStream.write(senderInfoBytes);
 
         dataOutputStream.flush();
         marshalledBytes = byteArrayOutputStream.toByteArray();
@@ -39,6 +48,12 @@ public class Query implements Protocol, Event {
                 new DataInputStream(new BufferedInputStream(byteArrayInputStream));
 
         messageType = dataInputStream.readInt();
+
+        int senderInfoLength = dataInputStream.readInt();
+        byte[] senderInfoBytes = new byte[senderInfoLength];
+        dataInputStream.readFully(senderInfoBytes);
+
+        senderInfo = new String(senderInfoBytes);
 
         byteArrayInputStream.close();
         dataInputStream.close();

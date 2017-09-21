@@ -4,13 +4,14 @@ import chord.node.NodeRecord;
 import chord.node.Peer;
 
 import java.util.HashMap;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class DiagnosticPrinterThread extends Thread {
 
     private Peer owner;
     private int diagnosticInterval;
-    private HashMap<Integer, NodeRecord> fingerTableCopy = new HashMap<>();
-    private HashMap<Integer, String> responsibleFilesCopy = new HashMap<>();
+    private ConcurrentHashMap<Integer, NodeRecord> fingerTableCopy = new ConcurrentHashMap<>();
+    private ConcurrentHashMap<Integer, String> responsibleFilesCopy = new ConcurrentHashMap<>();
 
     public DiagnosticPrinterThread(Peer owner, int diagnosticInterval) {
         this.owner = owner;
