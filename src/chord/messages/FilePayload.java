@@ -53,11 +53,6 @@ public class FilePayload implements Protocol, Event {
         dataOutputStream.writeInt(fileNameLength);
         dataOutputStream.write(fileNameBytes);
 
-        byte[] hostPortBytes = sendingNodeHostPort.getBytes();
-        int hostPortLength = hostPortBytes.length;
-        dataOutputStream.writeInt(hostPortLength);
-        dataOutputStream.write(hostPortBytes);
-
         byte[] fileBytes = Files.readAllBytes(fileToTransfer.toPath());
         int fileBytesLength = fileBytes.length;
         dataOutputStream.writeInt(fileBytesLength);
@@ -81,11 +76,11 @@ public class FilePayload implements Protocol, Event {
         messageType = dataInputStream.readInt();
         fileID = dataInputStream.readInt();
 
-        int fileNameLength = dataInputStream.readInt();
-        byte[] fileNameBytes = new byte[fileNameLength];
-        dataInputStream.readFully(fileNameBytes);
+        int filenameLength = dataInputStream.readInt();
+        byte[] filenameBytes = new byte[filenameLength];
+        dataInputStream.readFully(filenameBytes);
 
-        fileName = new String(fileNameBytes);
+        fileName = new String (filenameBytes);
 
         int fileLength = dataInputStream.readInt();
         byte[] fileBytes = new byte[fileLength];
