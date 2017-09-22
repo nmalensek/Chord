@@ -10,7 +10,6 @@ import chord.util.SplitHostPort;
 import java.io.File;
 import java.io.IOException;
 import java.net.Socket;
-import java.util.HashMap;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class MessageProcessor {
@@ -43,17 +42,18 @@ public class MessageProcessor {
     }
 
     public synchronized void processRegistration(NodeInformation information) throws IOException {
-        if (information.getSixteenBitID() != ID) { //not first node in the ring so find out where to go
+        int newNodeID = split.getID(information.getNodeInfo());
+        if (newNodeID != ID) { //not first node in the ring so find out where to go
             Lookup findLocation = new Lookup();
             findLocation.setRoutingPath(self.toString() + ",");
             findLocation.setPayloadID(ID);
-            Socket randomNodeSocket = new Socket(split.getHost(information.getHostPort()),
-                    split.getPort(information.getHostPort()));
+            Socket randomNodeSocket = new Socket(split.getHost(information.getNodeInfo()),
+                    split.getPort(information.getNodeInfo()));
             sender.sendToSpecificSocket(randomNodeSocket, findLocation.getBytes());
-            parent.getKnownNodes().put(information.getSixteenBitID(),
-                    new NodeRecord(information.getHostPort(),
-                            information.getSixteenBitID(),
-                            information.getNickname(), randomNodeSocket));
+            parent.getKnownNodes().put(newNodeID,
+                    new NodeRecord(split.getHostPort(information.getNodeInfo()),
+                            newNodeID,
+                            split.getHost(information.getNodeInfo()), randomNodeSocket));
         }
     }
 
@@ -211,9 +211,7 @@ public class MessageProcessor {
 
     public synchronized void sendSuccessorInformation(NodeRecord successor, AskForSuccessor message, Socket destinationSocket) throws IOException {
         SuccessorInformation successorInformation = new SuccessorInformation();
-        successorInformation.setSuccessorHostPort(successor.getHost() + ":" + successor.getPort());
-        successorInformation.setSuccessorID(successor.getIdentifier());
-        successorInformation.setSuccessorNickname(successor.getNickname());
+        successorInformation.setSuccessorInfo(successor.toString());
 
         if (destinationSocket == null) {
             System.out.println("sending on ask for successor message");
@@ -228,12 +226,12 @@ public class MessageProcessor {
     }
 
     public synchronized void processSuccessorInformation(SuccessorInformation successorInformation) throws IOException {
-        String successorHostPort = successorInformation.getSuccessorHostPort();
-        int successorID = successorInformation.getSuccessorID();
+        String successorHostPort = split.getHostPort(successorInformation.getSuccessorInfo());
+        int successorID = split.getID(successorInformation.getSuccessorInfo());
 
         if (!split.getHost(successorHostPort).equals(host) ||
                 split.getPort(successorHostPort) != port) { //stop if node's successor is this node
-            String successorNickname = successorInformation.getSuccessorNickname();
+            String successorNickname = split.getHost(successorInformation.getSuccessorInfo());
 
             NodeRecord successorNode;
             if (parent.getKnownNodes().get(successorID) == null) {
@@ -285,13 +283,13 @@ public class MessageProcessor {
     }
 
     public synchronized void updateSuccessor(QueryResponse queryResponse) throws IOException {
-        String newSuccessorHostPort = queryResponse.getPredecessorHostPort();
+        String newSuccessorHostPort = split.getHostPort(queryResponse.getPredecessorInfo());
         Socket newSuccessorSocket = new Socket(split.getHost(newSuccessorHostPort), split.getPort(newSuccessorHostPort));
         NodeRecord updatedSuccessor =
-                new NodeRecord(queryResponse.getPredecessorHostPort(),
-                        queryResponse.getPredecessorID(),
-                        queryResponse.getPredecessorNickname(), newSuccessorSocket);
-        parent.getKnownNodes().put(queryResponse.getPredecessorID(), updatedSuccessor);
+                new NodeRecord(newSuccessorHostPort,
+                        split.getID(queryResponse.getPredecessorInfo()),
+                        split.getHost(queryResponse.getPredecessorInfo()), newSuccessorSocket);
+        parent.getKnownNodes().put(split.getID(queryResponse.getPredecessorInfo()), updatedSuccessor);
         fingerTableManagement.updateConcurrentFingerTable(ID, parent.getFingerTable(), parent.getKnownNodes());
         parent.setFingerTableModified(true);
         //don't necessarily have to do below unless we need to update overlay super fast

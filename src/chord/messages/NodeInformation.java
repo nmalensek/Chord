@@ -4,22 +4,14 @@ import java.io.*;
 
 public class NodeInformation implements Protocol, Event {
     private int messageType = ENTER_OVERLAY;
-    private int sixteenBitID;
-    private String hostPort;
-    private String nickname;
+    private String nodeInfo;
 
     public NodeInformation getType() {
         return this;
     }
 
-    public int getSixteenBitID() { return sixteenBitID; }
-    public void setSixteenBitID(int sixteenBitID) { this.sixteenBitID = sixteenBitID; }
-
-    public String getHostPort() { return hostPort; }
-    public void setHostPort(String hostPort) { this.hostPort = hostPort; }
-
-    public String getNickname() { return nickname; }
-    public void setNickname(String nickname) { this.nickname = nickname; }
+    public String getNodeInfo() { return nodeInfo; }
+    public void setNodeInfo(String nodeInfo) { this.nodeInfo = nodeInfo; }
 
     @Override
     public int getMessageType() {
@@ -35,17 +27,10 @@ public class NodeInformation implements Protocol, Event {
 
         dataOutputStream.writeInt(messageType);
 
-        dataOutputStream.writeInt(sixteenBitID);
-
-        byte[] hostPortBytes = hostPort.getBytes();
-        int hostPortLength = hostPortBytes.length;
-        dataOutputStream.writeInt(hostPortLength);
-        dataOutputStream.write(hostPortBytes);
-
-        byte[] nicknameBytes = nickname.getBytes();
-        int nicknameLength = nicknameBytes.length;
-        dataOutputStream.writeInt(nicknameLength);
-        dataOutputStream.write(nicknameBytes);
+        byte[] infoBytes = nodeInfo.getBytes();
+        int infoLength = infoBytes.length;
+        dataOutputStream.writeInt(infoLength);
+        dataOutputStream.write(infoBytes);
 
         dataOutputStream.flush();
         marshalledBytes = byteArrayOutputStream.toByteArray();
@@ -64,19 +49,11 @@ public class NodeInformation implements Protocol, Event {
 
         messageType = dataInputStream.readInt();
 
-        sixteenBitID = dataInputStream.readInt();
+        int infoLength = dataInputStream.readInt();
+        byte[] infoBytes = new byte[infoLength];
+        dataInputStream.readFully(infoBytes);
 
-        int hostPortLength = dataInputStream.readInt();
-        byte[] hostPortBytes = new byte[hostPortLength];
-        dataInputStream.readFully(hostPortBytes);
-
-        hostPort = new String(hostPortBytes);
-
-        int nicknameLength = dataInputStream.readInt();
-        byte[] nicknameBytes = new byte[nicknameLength];
-        dataInputStream.readFully(nicknameBytes);
-
-        nickname = new String(nicknameBytes);
+        nodeInfo = new String(infoBytes);
 
         byteArrayInputStream.close();
         dataInputStream.close();

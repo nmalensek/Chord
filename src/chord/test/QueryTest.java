@@ -84,19 +84,20 @@ public class QueryTest implements Node {
     }
 
     public synchronized void processRegistration(NodeInformation information) throws IOException {
-        if (information.getSixteenBitID() != nodeIdentifier) { //not first node in the ring so find out where to go
-            System.out.println("message ID: " + information.getSixteenBitID() + " vs. my ID: " + nodeIdentifier);
+        int infoID = split.getID(information.getNodeInfo());
+        if (infoID != nodeIdentifier) { //not first node in the ring so find out where to go
+            System.out.println("message ID: " + infoID + " vs. my ID: " + nodeIdentifier);
 //            getKnownNodes().remove(nodeIdentifier); //remove self from known nodes so FT is ok
             Lookup findLocation = new Lookup();
             findLocation.setRoutingPath(self.toString() + ",");
             findLocation.setPayloadID(nodeIdentifier);
-            Socket randomNodeSocket = new Socket(split.getHost(information.getHostPort()),
-                    split.getPort(information.getHostPort()));
+            Socket randomNodeSocket = new Socket(split.getHost(information.getNodeInfo()),
+                    split.getPort(information.getNodeInfo()));
             sender.sendToSpecificSocket(randomNodeSocket, findLocation.getBytes());
-            getKnownNodes().put(information.getSixteenBitID(),
-                    new NodeRecord(information.getHostPort(),
-                            information.getSixteenBitID(),
-                            information.getNickname(), randomNodeSocket));
+            getKnownNodes().put(infoID,
+                    new NodeRecord(split.getHostPort(information.getNodeInfo()),
+                            infoID,
+                            split.getHost(information.getNodeInfo()), randomNodeSocket));
         }
     }
 
@@ -216,11 +217,8 @@ public class QueryTest implements Node {
 
     private synchronized QueryResponse writeQueryResponse() throws IOException {
         QueryResponse queryResponse = new QueryResponse();
-        queryResponse.setPredecessorID(predecessor.getIdentifier());
-        queryResponse.setPredecessorHostPort(predecessor.getHost() + ":" + predecessor.getPort());
-        queryResponse.setPredecessorNickname(predecessor.getNickname());
-        System.out.println(queryResponse.getPredecessorID() + "\t" + queryResponse.getPredecessorHostPort() + "\t"
-                + queryResponse.getMessageType());
+        queryResponse.setPredecessorInfo(predecessor.toString());
+        System.out.println(predecessor);
         return queryResponse;
     }
 
@@ -290,9 +288,7 @@ public class QueryTest implements Node {
 
     private void connectToNetwork() throws IOException {
         NodeInformation nodeInformation = new NodeInformation();
-        nodeInformation.setSixteenBitID(nodeIdentifier);
-        nodeInformation.setHostPort(peerHost + ":" + peerPort);
-        nodeInformation.setNickname(peerHost + ":" + peerPort);
+        nodeInformation.setNodeInfo(peerHost + ":" + peerPort + ":" + nodeIdentifier);
         sender.sendToSpecificSocket(discoveryNodeSocket, nodeInformation.getBytes());
     }
 

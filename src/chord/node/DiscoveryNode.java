@@ -3,6 +3,7 @@ package chord.node;
 import chord.messages.*;
 import chord.transport.TCPSender;
 import chord.transport.TCPServerThread;
+import chord.util.SplitHostPort;
 import chord.utilitythreads.TextInputThread;
 
 import java.io.IOException;
@@ -22,6 +23,7 @@ public class DiscoveryNode implements Node {
     private HashMap<Integer, NodeRecord> registeredPeers = new HashMap<>();
     private ArrayList<Integer> randomNodes = new ArrayList<>();
     private TCPSender sender = new TCPSender();
+    private SplitHostPort split = new SplitHostPort();
 
     public DiscoveryNode() {
     }
@@ -54,9 +56,7 @@ public class DiscoveryNode implements Node {
 
     private synchronized NodeInformation prepareRandomNodeInfoMessage(NodeRecord randomNode) {
         NodeInformation randomNodeInfo = new NodeInformation();
-        randomNodeInfo.setSixteenBitID(randomNode.getIdentifier());
-        randomNodeInfo.setHostPort(randomNode.getHost() + ":" + randomNode.getPort());
-        randomNodeInfo.setNickname(randomNode.getNickname());
+        randomNodeInfo.setNodeInfo(randomNode.toString());
         return randomNodeInfo;
     }
 
@@ -92,9 +92,9 @@ public class DiscoveryNode implements Node {
     }
 
     private synchronized NodeRecord constructNewNode(Event event, Socket newSocket) throws IOException {
-        String hostPort = ((NodeInformation) event).getHostPort();
-        int identifier = ((NodeInformation) event).getSixteenBitID();
-        String nickname = ((NodeInformation) event).getNickname();
+        String hostPort = split.getHostPort(((NodeInformation) event).getNodeInfo());
+        int identifier = split.getID(((NodeInformation) event).getNodeInfo());
+        String nickname = split.getHost(((NodeInformation) event).getNodeInfo());
         NodeRecord newNode = new NodeRecord(hostPort, identifier, nickname, newSocket);
 
         return newNode;

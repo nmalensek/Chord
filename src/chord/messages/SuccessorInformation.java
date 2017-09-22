@@ -4,20 +4,12 @@ import java.io.*;
 
 public class SuccessorInformation implements Protocol, Event {
     private int messageType = SUCCESSOR_INFO;
-    private int successorID;
-    private String successorHostPort;
-    private String successorNickname;
+    private String successorInfo;
 
     public SuccessorInformation getType() { return this; }
 
-    public int getSuccessorID() { return successorID; }
-    public void setSuccessorID(int successorID) { this.successorID = successorID; }
-
-    public String getSuccessorHostPort() { return successorHostPort; }
-    public void setSuccessorHostPort(String successorHostPort) { this.successorHostPort = successorHostPort; }
-
-    public String getSuccessorNickname() { return successorNickname; }
-    public void setSuccessorNickname(String successorNickname) { this.successorNickname = successorNickname; }
+    public String getSuccessorInfo() { return successorInfo; }
+    public void setSuccessorInfo(String successorInfo) { this.successorInfo = successorInfo; }
 
     @Override
     public int getMessageType() {
@@ -33,17 +25,10 @@ public class SuccessorInformation implements Protocol, Event {
 
         dataOutputStream.writeInt(messageType);
 
-        dataOutputStream.writeInt(successorID);
-
-        byte[] hostPortBytes = successorHostPort.getBytes();
-        int hostPortLength = hostPortBytes.length;
-        dataOutputStream.writeInt(hostPortLength);
-        dataOutputStream.write(hostPortBytes);
-
-        byte[] nicknameBytes = successorNickname.getBytes();
-        int nicknameLength = nicknameBytes.length;
-        dataOutputStream.writeInt(nicknameLength);
-        dataOutputStream.write(nicknameBytes);
+        byte[] successorBytes = successorInfo.getBytes();
+        int successorLength = successorBytes.length;
+        dataOutputStream.writeInt(successorLength);
+        dataOutputStream.write(successorBytes);
 
         dataOutputStream.flush();
         marshalledBytes = byteArrayOutputStream.toByteArray();
@@ -62,19 +47,11 @@ public class SuccessorInformation implements Protocol, Event {
 
         messageType = dataInputStream.readInt();
 
-        successorID = dataInputStream.readInt();
+        int successorLength = dataInputStream.readInt();
+        byte[] successorBytes = new byte[successorLength];
+        dataInputStream.readFully(successorBytes);
 
-        int hostPortLength = dataInputStream.readInt();
-        byte[] hostPortBytes = new byte[hostPortLength];
-        dataInputStream.readFully(hostPortBytes);
-
-        successorHostPort = new String(hostPortBytes);
-
-        int nicknameLength = dataInputStream.readInt();
-        byte[] nicknameBytes = new byte[nicknameLength];
-        dataInputStream.readFully(nicknameBytes);
-
-        successorNickname = new String(nicknameBytes);
+        successorInfo = new String(successorBytes);
 
         byteArrayInputStream.close();
         dataInputStream.close();

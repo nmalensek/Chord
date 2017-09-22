@@ -4,22 +4,19 @@ import java.io.*;
 
 public class QueryResponse implements Protocol, Event {
     private int messageType = QUERY_RESPONSE;
-    private int predecessorID;
-    private String predecessorHostPort;
-    private String predecessorNickname;
+    private String predecessorInfo;
 
     public QueryResponse getType() {
         return this;
     }
 
-    public int getPredecessorID() { return predecessorID; }
-    public void setPredecessorID(int predecessorID) { this.predecessorID = predecessorID; }
+    public String getPredecessorInfo() {
+        return predecessorInfo;
+    }
 
-    public String getPredecessorHostPort() { return predecessorHostPort; }
-    public void setPredecessorHostPort(String predecessorHostPort) { this.predecessorHostPort = predecessorHostPort; }
-
-    public String getPredecessorNickname() { return predecessorNickname; }
-    public void setPredecessorNickname(String predecessorNickname) { this.predecessorNickname = predecessorNickname; }
+    public void setPredecessorInfo(String predecessorInfo) {
+        this.predecessorInfo = predecessorInfo;
+    }
 
     @Override
     public int getMessageType() {
@@ -35,17 +32,10 @@ public class QueryResponse implements Protocol, Event {
 
         dataOutputStream.writeInt(messageType);
 
-        dataOutputStream.writeInt(predecessorID);
-
-        byte[] hostPortBytes = predecessorHostPort.getBytes();
-        int hostPortLength = hostPortBytes.length;
-        dataOutputStream.writeInt(hostPortLength);
-        dataOutputStream.write(hostPortBytes);
-
-        byte[] nicknameBytes = predecessorNickname.getBytes();
-        int nicknameLength = nicknameBytes.length;
-        dataOutputStream.writeInt(nicknameLength);
-        dataOutputStream.write(nicknameBytes);
+        byte[] infoBytes = predecessorInfo.getBytes();
+        int infoLength = infoBytes.length;
+        dataOutputStream.writeInt(infoLength);
+        dataOutputStream.write(infoBytes);
 
         dataOutputStream.flush();
         marshalledBytes = byteArrayOutputStream.toByteArray();
@@ -64,19 +54,12 @@ public class QueryResponse implements Protocol, Event {
 
         messageType = dataInputStream.readInt();
 
-        predecessorID = dataInputStream.readInt();
 
-        int hostPortLength = dataInputStream.readInt();
-        byte[] hostPortBytes = new byte[hostPortLength];
-        dataInputStream.readFully(hostPortBytes);
+        int infoLength = dataInputStream.readInt();
+        byte[] infoBytes = new byte[infoLength];
+        dataInputStream.readFully(infoBytes);
 
-        predecessorHostPort = new String(hostPortBytes);
-
-        int nicknameLength = dataInputStream.readInt();
-        byte[] nicknameBytes = new byte[nicknameLength];
-        dataInputStream.readFully(nicknameBytes);
-
-        predecessorNickname = new String(nicknameBytes);
+        predecessorInfo = new String(infoBytes);
 
         byteArrayInputStream.close();
         dataInputStream.close();

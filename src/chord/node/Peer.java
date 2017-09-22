@@ -18,7 +18,6 @@ import java.io.IOException;
 import java.net.Inet4Address;
 import java.net.Socket;
 import java.net.UnknownHostException;
-import java.util.HashMap;
 import java.util.Scanner;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -95,9 +94,7 @@ public class Peer implements Node {
 
     private void connectToNetwork() throws IOException {
         NodeInformation nodeInformation = new NodeInformation();
-        nodeInformation.setSixteenBitID(nodeIdentifier);
-        nodeInformation.setHostPort(peerHost + ":" + peerPort);
-        nodeInformation.setNickname(peerHost + ":" + peerPort);
+        nodeInformation.setNodeInfo(peerHost + ":" + peerPort + ":" + nodeIdentifier);
         sender.sendToSpecificSocket(discoveryNodeSocket, nodeInformation.getBytes());
     }
 
@@ -151,7 +148,7 @@ public class Peer implements Node {
                 }
             } else if (event instanceof QueryResponse) {
                 QueryResponse queryResponseMessage = (QueryResponse) event;
-                if (queryResponseMessage.getPredecessorID() != nodeIdentifier) {
+                if (split.getID(queryResponseMessage.getPredecessorInfo()) != nodeIdentifier) {
                     messageProcessor.updateSuccessor(queryResponseMessage);
                 }
             } else if (event instanceof UpdatePredecessor) {
@@ -176,11 +173,8 @@ public class Peer implements Node {
 
     private synchronized QueryResponse writeQueryResponse() throws IOException {
         QueryResponse queryResponse = new QueryResponse();
-        queryResponse.setPredecessorID(predecessor.getIdentifier());
-        queryResponse.setPredecessorHostPort(predecessor.getHost() + ":" + predecessor.getPort());
-        queryResponse.setPredecessorNickname(predecessor.getNickname());
-        System.out.println(queryResponse.getPredecessorID() + "\t" + queryResponse.getPredecessorHostPort() + "\t"
-        + queryResponse.getMessageType());
+        queryResponse.setPredecessorInfo(predecessor.toString());
+        System.out.println(predecessor.toString());
         return queryResponse;
     }
 
