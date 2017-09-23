@@ -25,8 +25,8 @@ public class TestFileServer implements Node {
             System.out.println("sending file");
             FilePayload file = new FilePayload();
             file.setFileID(123456);
-            file.setFileToTransfer(new File("123456.png"));
             file.setFileName("123456.png");
+            file.setFileToTransfer(new File("123456.png"));
 
             TCPSender sender = new TCPSender();
             sender.sendToSpecificSocket(destinationSocket, file.getBytes());

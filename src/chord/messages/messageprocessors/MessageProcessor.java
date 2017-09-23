@@ -75,7 +75,8 @@ public class MessageProcessor {
             }
         } else if (successor.getIdentifier() >= payload && predecessorID < payload) { //Successor is largest, send to there
             forwardLookup(lookupEvent, successor);
-        } else if (successor.getIdentifier() >= payload && fingerTableManagement.predecessorIsLargestConcurrent(parent.getKnownNodes(), predecessorID)) {
+        } else if (successor.getIdentifier() >= payload &&
+                fingerTableManagement.predecessorIsLargestConcurrent(parent.getKnownNodes(), predecessorID)) {
             forwardLookup(lookupEvent, successor); //send to successor if predecessor's the largest node in the overlay
         }
         else {
@@ -94,7 +95,8 @@ public class MessageProcessor {
         }
     }
 
-    private synchronized void sendDestinationMessage(Lookup lookup, String successorHostPortID, String predecessorHostPortID) throws IOException {
+    private synchronized void sendDestinationMessage(Lookup lookup, String successorHostPortID,
+                                                     String predecessorHostPortID) throws IOException {
         DestinationNode thisNodeIsSink = new DestinationNode();
         thisNodeIsSink.setDestinationNode(successorHostPortID);
         thisNodeIsSink.setDestinationPredecessor(predecessorHostPortID);
@@ -169,7 +171,8 @@ public class MessageProcessor {
         fingerTableManagement.printConcurrentFingerTable(parent.getFingerTable());
     }
 
-    public synchronized void processPredecessorUpdate(UpdatePredecessor updatePredecessor, ConcurrentHashMap<Integer, File> fileHashMap) throws IOException {
+    public synchronized void processPredecessorUpdate(UpdatePredecessor updatePredecessor,
+                                                      ConcurrentHashMap<Integer, File> fileHashMap) throws IOException {
         int predecessorID = split.getID(updatePredecessor.getPredecessorInfo());
         String predecessorHost = split.getHost(updatePredecessor.getPredecessorInfo());
         int predecessorPort = split.getPort(updatePredecessor.getPredecessorInfo());
@@ -192,11 +195,12 @@ public class MessageProcessor {
 
         int filesTransferred = 0;
         for (int fileKey : fileHashMap.keySet()) {
-            if (fileKey <= predecessorID) {
+            if (predecessorID < ID && predecessorID >= fileKey || predecessorID > ID && predecessorID >= fileKey) {
                 FilePayload file = new FilePayload();
                 file.setFileID(fileKey);
                 file.setFileName(fileHashMap.get(fileKey).getName());
                 file.setFileToTransfer(fileHashMap.get(fileKey));
+                file.setSendingNodeHostPort(host + ":" + port);
                 System.out.println("Sending file " + fileKey + " to " + newPredecessor.toString());
                 TCPSender sender = new TCPSender();
                 sender.sendToSpecificSocket(newPredecessor.getNodeSocket(), file.getBytes());
@@ -209,7 +213,8 @@ public class MessageProcessor {
         }
     }
 
-    public synchronized void sendSuccessorInformation(NodeRecord successor, AskForSuccessor message, Socket destinationSocket) throws IOException {
+    public synchronized void sendSuccessorInformation(NodeRecord successor, AskForSuccessor message,
+                                                      Socket destinationSocket) throws IOException {
         SuccessorInformation successorInformation = new SuccessorInformation();
         successorInformation.setSuccessorInfo(successor.toString());
 
@@ -265,7 +270,8 @@ public class MessageProcessor {
         }
     }
 
-    public synchronized void processPayload(FilePayload filePayload, ConcurrentHashMap<Integer, File> filesResponsibleFor) throws IOException {
+    public synchronized void processPayload(FilePayload filePayload, ConcurrentHashMap<Integer, File> filesResponsibleFor)
+            throws IOException {
         if (filesResponsibleFor.get(filePayload.getFileID()) == null) {
             System.out.println("storing file");
             filePayload.writeFile(filePayload.getFileByteArray(), storageDirectory + filePayload.getFileName());
