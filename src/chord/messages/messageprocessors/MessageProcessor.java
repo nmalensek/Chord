@@ -85,7 +85,11 @@ public class MessageProcessor {
                 NodeRecord currentRow = parentFingerTable.get(key);
                 NodeRecord nextRow = parentFingerTable.get(key + 1);
                 if (nextRow == null) {
-                    forwardLookup(lookupEvent, currentRow); //you're at the last FT entry, forward to currentRow
+                    if (currentRow.getIdentifier() == ID) { //if the last row is yourself, you're the destination
+                        sendDestinationMessage(lookupEvent, self.toString(), parent.getPredecessor().toString());
+                    } else {
+                        forwardLookup(lookupEvent, currentRow); //you're at the last FT entry, forward to currentRow
+                    }
                     break;
                 } else if (currentRow.getIdentifier() <= payload && payload < nextRow.getIdentifier()) {
                     forwardLookup(lookupEvent, currentRow); //currentRow is largest FT row that's still less than k, send to there
@@ -195,7 +199,7 @@ public class MessageProcessor {
 
         int filesTransferred = 0;
         for (int fileKey : fileHashMap.keySet()) {
-            if (predecessorID < ID && predecessorID >= fileKey || predecessorID > ID && predecessorID >= fileKey) {
+            if (predecessorID < ID && predecessorID >= fileKey || predecessorID > ID && predecessorID >= fileKey && fileKey > ID) {
                 FilePayload file = new FilePayload();
                 file.setFileID(fileKey);
                 file.setFileName(fileHashMap.get(fileKey).getName());
