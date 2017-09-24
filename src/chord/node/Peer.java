@@ -182,7 +182,7 @@ public class Peer implements Node {
     private synchronized QueryResponse writeQueryResponse() throws IOException {
         QueryResponse queryResponse = new QueryResponse();
         queryResponse.setPredecessorInfo(predecessor.toString());
-        System.out.println(predecessor.toString());
+//        System.out.println(predecessor.toString());
         return queryResponse;
     }
 

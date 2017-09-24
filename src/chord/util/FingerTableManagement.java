@@ -1,5 +1,6 @@
 package chord.util;
 
+import chord.node.Node;
 import chord.node.NodeRecord;
 
 import java.util.HashMap;
@@ -108,5 +109,15 @@ public class FingerTableManagement {
             }
         }
         return largest == nodeID;
+    }
+
+    public synchronized boolean nodeIsSmallestConcurrent(ConcurrentHashMap<Integer, NodeRecord> knownNodes, int nodeID) {
+        int smallest = nodeID;
+        for (int id : knownNodes.keySet()) {
+            if (id < nodeID) {
+                smallest = id;
+            }
+        }
+        return smallest == nodeID;
     }
 }

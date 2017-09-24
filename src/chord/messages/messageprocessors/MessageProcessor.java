@@ -75,6 +75,9 @@ public class MessageProcessor {
             } else if (smaller.getIdentifier() < payload && payload < larger.getIdentifier()) {
                 sendDestinationMessage(lookupEvent, larger.toString(), smaller.toString());
             }
+        } else if (fingerTableManagement.nodeIsSmallestConcurrent(parent.getKnownNodes(), ID)
+                && payload < ID && predecessorID > ID) {
+            sendDestinationMessage(lookupEvent, self.toString(), predecessor.toString());
         } else if (successor.getIdentifier() >= payload && predecessorID < payload) { //Successor is largest, send to there
             forwardLookup(lookupEvent, successor);
         } else if (successor.getIdentifier() >= payload &&
