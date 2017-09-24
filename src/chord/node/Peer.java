@@ -18,6 +18,8 @@ import java.io.IOException;
 import java.net.Inet4Address;
 import java.net.Socket;
 import java.net.UnknownHostException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.Scanner;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -125,7 +127,7 @@ public class Peer implements Node {
             if (event instanceof NodeInformation) {
                 NodeInformation information = (NodeInformation) event;
                 messageProcessor.processRegistration(information);
-//                addShutDownHook();
+                addShutDownHook();
                 System.out.println("Added shutdown hook");
             } else if (event instanceof Collision) {
                 System.out.println("This node's ID already exists in the overlay. Please enter a new one:");
@@ -197,6 +199,9 @@ public class Peer implements Node {
                     + fingerTable.get(1).getIdentifier());
             TCPSender sender = new TCPSender();
             sender.sendToSpecificSocket(fingerTable.get(1).getNodeSocket(), file.getBytes());
+
+            File transferredFile = filesResponsibleFor.remove(fileKey);
+            Files.delete(Paths.get(transferredFile.getPath()));
         }
     }
 
