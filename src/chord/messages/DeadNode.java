@@ -2,22 +2,17 @@ package chord.messages;
 
 import java.io.*;
 
-public class DestinationNode implements Protocol, Event {
-
-    private int messageType = DESTINATION;
-    private String destinationNode;
-    private String destinationPredecessor;
+public class DeadNode implements Protocol, Event {
+    private int messageType = DEAD_NODE;
+    private String deadNode;
     private String origin;
 
-    public DestinationNode getType() {
+    public DeadNode getType() {
         return this;
     }
 
-    public String getDestinationNode() { return destinationNode; }
-    public void setDestinationNode(String destinationNode) { this.destinationNode = destinationNode; }
-
-    public String getDestinationPredecessor() { return destinationPredecessor; }
-    public void setDestinationPredecessor(String destinationPredecessor) { this.destinationPredecessor = destinationPredecessor; }
+    public String getDeadNode() { return deadNode; }
+    public void setDeadNode(String deadNode) { this.deadNode = deadNode; }
 
     public String getOrigin() { return origin; }
     public void setOrigin(String origin) { this.origin = origin; }
@@ -36,15 +31,10 @@ public class DestinationNode implements Protocol, Event {
 
         dataOutputStream.writeInt(messageType);
 
-        byte[] destinationBytes = destinationNode.getBytes();
-        int destinationLength = destinationBytes.length;
-        dataOutputStream.writeInt(destinationLength);
-        dataOutputStream.write(destinationBytes);
-
-        byte[] destinationPredecessorBytes = destinationPredecessor.getBytes();
-        int destinationPredecessorLength = destinationPredecessorBytes.length;
-        dataOutputStream.writeInt(destinationPredecessorLength);
-        dataOutputStream.write(destinationPredecessorBytes);
+        byte[] deadNodeBytes = deadNode.getBytes();
+        int deadNodeLength = deadNodeBytes.length;
+        dataOutputStream.writeInt(deadNodeLength);
+        dataOutputStream.write(deadNodeBytes);
 
         byte[] originBytes = origin.getBytes();
         int originLength = originBytes.length;
@@ -68,17 +58,11 @@ public class DestinationNode implements Protocol, Event {
 
         messageType = dataInputStream.readInt();
 
-        int destinationLength = dataInputStream.readInt();
-        byte[] destinationBytes = new byte[destinationLength];
-        dataInputStream.readFully(destinationBytes);
+        int deadNodeLength = dataInputStream.readInt();
+        byte[] deadNodeBytes = new byte[deadNodeLength];
+        dataInputStream.readFully(deadNodeBytes);
 
-        destinationNode = new String(destinationBytes);
-
-        int destinationPredecessorLength = dataInputStream.readInt();
-        byte[] destinationPredecessorInfo = new byte[destinationPredecessorLength];
-        dataInputStream.readFully(destinationPredecessorInfo);
-
-        destinationPredecessor = new String(destinationPredecessorInfo);
+        deadNode = new String(deadNodeBytes);
 
         int originBytesLength = dataInputStream.readInt();
         byte[] originNodeBytes = new byte[originBytesLength];
@@ -89,5 +73,4 @@ public class DestinationNode implements Protocol, Event {
         byteArrayInputStream.close();
         dataInputStream.close();
     }
-
 }

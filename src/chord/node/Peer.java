@@ -125,7 +125,7 @@ public class Peer implements Node {
             if (event instanceof NodeInformation) {
                 NodeInformation information = (NodeInformation) event;
                 messageProcessor.processRegistration(information);
-                addShutDownHook();
+//                addShutDownHook();
                 System.out.println("Added shutdown hook");
             } else if (event instanceof Collision) {
                 System.out.println("This node's ID already exists in the overlay. Please enter a new one:");

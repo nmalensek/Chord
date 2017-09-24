@@ -9,6 +9,7 @@ import chord.util.SplitHostPort;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.ConnectException;
 import java.net.Socket;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -111,6 +112,7 @@ public class MessageProcessor {
         DestinationNode thisNodeIsSink = new DestinationNode();
         thisNodeIsSink.setDestinationNode(successorHostPortID);
         thisNodeIsSink.setDestinationPredecessor(predecessorHostPortID);
+        thisNodeIsSink.setOrigin(self.toString());
         System.out.println("sent destination message with predecessor information of "
         + thisNodeIsSink.getDestinationPredecessor() + "\nand successor information: " + thisNodeIsSink.getDestinationNode());
 
@@ -141,16 +143,25 @@ public class MessageProcessor {
     }
 
     private synchronized void forwardLookup(Lookup lookup, NodeRecord forwardTarget) throws IOException {
-        lookup.setRoutingPath(lookup.getRoutingPath() + self.toString() + ",");
-        lookup.setNumHops((lookup.getNumHops() + 1));
-        Socket successorSocket = forwardTarget.getNodeSocket();
-        System.out.println("Forwarding lookup message to " + forwardTarget);
-        sender.sendToSpecificSocket(successorSocket, lookup.getBytes());
-        System.out.println("Hops: " + lookup.getNumHops() + "\tfor id: " + lookup.getPayloadID());
+        try {
+            lookup.setRoutingPath(lookup.getRoutingPath() + self.toString() + ",");
+            Socket targetNodeSocket = forwardTarget.getNodeSocket();
+            lookup.setNumHops((lookup.getNumHops() + 1));
+            sender.sendToSpecificSocket(targetNodeSocket, lookup.getBytes());
+            System.out.println("Forwarding lookup message to " + forwardTarget);
+            System.out.println("Hops: " + lookup.getNumHops() + "\tfor id: " + lookup.getPayloadID());
+        } catch (NullPointerException npe) {
+            lookup.setNumHops((lookup.getNumHops() -1));
+            parent.getKnownNodes().remove(forwardTarget.getIdentifier());
+            fingerTableManagement.updateConcurrentFingerTable(ID, parent.getFingerTable(), parent.getKnownNodes());
+            processLookup(lookup, parent.getPredecessor());
+        }
+
     }
 
     public synchronized void processDestination(DestinationNode destinationNode) throws IOException {
         //a destination means that node's your successor, so set successor
+
         String successorHostPortID = destinationNode.getDestinationNode();
         int successorID = split.getID(successorHostPortID);
         String successorNickname = split.getHost(successorHostPortID);
@@ -161,25 +172,27 @@ public class MessageProcessor {
         parent.getFingerTable().put(1, successorNode);
         parent.getKnownNodes().put(successorID, successorNode);
 
-        String predecessorInfo = destinationNode.getDestinationPredecessor();
-        if (parent.getKnownNodes().get(split.getID(predecessorInfo)) == null) {
-            Socket predecessorSocket = new Socket(split.getHost(predecessorInfo), split.getPort(predecessorInfo));
-            String predHost = split.getHost(predecessorInfo);
-            int predPort = split.getPort(predecessorInfo);
-            int predID = split.getID(predecessorInfo);
-            NodeRecord newPredecessor = new NodeRecord(predHost + ":" + predPort, predID, predHost, predecessorSocket);
-            parent.getKnownNodes().put(predID, newPredecessor);
-            parent.setPredecessor(newPredecessor);
-        } else {
-            parent.setPredecessor(parent.getKnownNodes().get(split.getID(predecessorInfo)));
-        }
+            String predecessorInfo = destinationNode.getDestinationPredecessor();
+            if (parent.getKnownNodes().get(split.getID(predecessorInfo)) == null) {
+                Socket predecessorSocket = new Socket(split.getHost(predecessorInfo), split.getPort(predecessorInfo));
+                String predHost = split.getHost(predecessorInfo);
+                int predPort = split.getPort(predecessorInfo);
+                int predID = split.getID(predecessorInfo);
+                NodeRecord newPredecessor = new NodeRecord(predHost + ":" + predPort, predID, predHost, predecessorSocket);
+                parent.getKnownNodes().put(predID, newPredecessor);
+                parent.setPredecessor(newPredecessor);
+            } else {
+                parent.setPredecessor(parent.getKnownNodes().get(split.getID(predecessorInfo)));
+            }
 
-        UpdatePredecessor updatePredecessor = new UpdatePredecessor(); //tell successor to update its predecessor
-        updatePredecessor.setPredecessorInfo(host + ":" + port + ":" + ID);
-        sender.sendToSpecificSocket(successorNode.getNodeSocket(), updatePredecessor.getBytes());
+            UpdatePredecessor updatePredecessor = new UpdatePredecessor(); //tell successor to update its predecessor
+            updatePredecessor.setPredecessorInfo(host + ":" + port + ":" + ID);
+            sender.sendToSpecificSocket(successorNode.getNodeSocket(), updatePredecessor.getBytes());
 
         fingerTableManagement.updateConcurrentFingerTable(ID, parent.getFingerTable(), parent.getKnownNodes());
         fingerTableManagement.printConcurrentFingerTable(parent.getFingerTable());
+
+
     }
 
     public synchronized void processPredecessorUpdate(UpdatePredecessor updatePredecessor,
@@ -316,5 +329,13 @@ public class MessageProcessor {
         //don't necessarily have to do below unless we need to update overlay super fast
 //        Query queryNewSuccessor = new Query(); //check if this node is successor to new node
 //        sender.sendToSpecificSocket(updatedSuccessor.getNodeSocket(), queryNewSuccessor.getBytes());
+    }
+
+    private synchronized void sendDeadNodeMessage(String deadNodeInfo, String targetNode) throws IOException {
+        DeadNode deadNode = new DeadNode();
+        deadNode.setDeadNode(deadNodeInfo);
+        deadNode.setOrigin(self.toString());
+        Socket targetSocket = new Socket(split.getHost(targetNode), split.getPort(targetNode));
+        sender.sendToSpecificSocket(targetSocket, deadNode.getBytes());
     }
 }

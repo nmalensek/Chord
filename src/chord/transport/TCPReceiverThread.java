@@ -130,6 +130,11 @@ public class TCPReceiverThread extends Thread implements Protocol {
                         eventFactory.filePayloadEvent(marshalledBytes);
                 node.onEvent(filePayloadEvent, communicationSocket);
                 break;
+            case DEAD_NODE:
+                Event<DeadNode> deadNodeEvent =
+                        eventFactory.deadNodeEvent(marshalledBytes);
+                node.onEvent(deadNodeEvent, communicationSocket);
+                break;
             case TEST:
                 Event<TestMessage> testMessageEvent =
                         eventFactory.testMessageEvent(marshalledBytes);

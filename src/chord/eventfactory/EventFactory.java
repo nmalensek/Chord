@@ -104,6 +104,13 @@ public final class EventFactory {
         return filePayload;
     }
 
+    public static Event<DeadNode> deadNodeEvent(
+            byte[] marshalledBytes) throws IOException {
+        DeadNode deadNode = new DeadNode();
+        deadNode.readMessage(marshalledBytes);
+        return deadNode;
+    }
+
     public static Event<TestMessage> testMessageEvent(
             byte[] marshalledBytes) throws IOException {
         TestMessage testMessage = new TestMessage();

@@ -13,6 +13,7 @@ public interface Protocol {
     int UPDATE = 9;
     int ASK_FOR_SUCCESSOR = 10;
     int SUCCESSOR_INFO = 11;
+    int DEAD_NODE = 12;
     int EXIT_OVERLAY = 99;
     int TEST = 100;
     int TEST_RESPONSE = 101;
