@@ -51,9 +51,9 @@ public class ShutdownHook extends Thread {
         leaving.setPredecessorInfo(predecessor.toString());
         try {
             if (successor.getNodeSocket() != null) {
+                owner.sendFilesToSuccessor();
                 sender.sendToSpecificSocket(successor.getNodeSocket(), leaving.getBytes());
                 sender.sendToSpecificSocket(predecessor.getNodeSocket(), leaving.getBytes());
-                owner.sendFilesToSuccessor();
             }
             sender.sendToSpecificSocket(discoveryNodeSocket, leaving.getBytes());
         } catch (IOException e) {

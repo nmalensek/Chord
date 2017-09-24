@@ -57,17 +57,19 @@ public class StoreData implements Node {
             Socket lookupSocket = new Socket(split.getHost(lookupHostPort), split.getPort(lookupHostPort));
             sender.sendToSpecificSocket(lookupSocket, lookup.getBytes());
         } else if (event instanceof DestinationNode) {
+            DestinationNode destination = (DestinationNode) event;
             FilePayload file = new FilePayload();
             file.setFileID(fileID);
             file.setFileName(filePath.getFileName().toString());
             file.setFileToTransfer(new File(filePath.toString()));
             file.setSendingNodeHostPort(thisNodeHost + ":" + thisNodePort);
-            System.out.println("Sending file " + fileID + " to " + ((DestinationNode) event).getDestinationNode() + "\tID: "
-                    + ((DestinationNode) event).getDestinationNode());
+            System.out.println("Sending file " + fileID + " to " + destination.getDestinationNode());
 
-            System.out.println("Sent message with host port of " + file.getSendingNodeHostPort());
+            Socket fileReceiverSocket = new Socket(split.getHost(destination.getDestinationNode()),
+                    split.getPort(destination.getDestinationNode()));
+
             TCPSender sender = new TCPSender();
-            sender.sendToSpecificSocket(destinationSocket, file.getBytes());
+            sender.sendToSpecificSocket(fileReceiverSocket, file.getBytes());
         } else if (event instanceof Collision) {
             System.out.println("A file already exists in the network with that ID. Specify a new ID or rename the file and try again.");
         }
