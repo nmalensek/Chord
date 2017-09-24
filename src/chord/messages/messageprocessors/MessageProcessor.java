@@ -151,7 +151,7 @@ public class MessageProcessor {
             System.out.println("Forwarding lookup message to " + forwardTarget);
             System.out.println("Hops: " + lookup.getNumHops() + "\tfor id: " + lookup.getPayloadID());
         } catch (NullPointerException npe) {
-            lookup.setNumHops((lookup.getNumHops() -1));
+            lookup.setNumHops((lookup.getNumHops() - 1));
             parent.getKnownNodes().remove(forwardTarget.getIdentifier());
             fingerTableManagement.updateConcurrentFingerTable(ID, parent.getFingerTable(), parent.getKnownNodes());
             processLookup(lookup, parent.getPredecessor());
