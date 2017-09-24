@@ -100,13 +100,13 @@ public class FingerTableManagement {
         }
     }
 
-    public synchronized boolean predecessorIsLargestConcurrent(ConcurrentHashMap<Integer, NodeRecord> knownNodes, int predecessorID) {
-        int largest = predecessorID;
+    public synchronized boolean nodeIsLargestConcurrent(ConcurrentHashMap<Integer, NodeRecord> knownNodes, int nodeID) {
+        int largest = nodeID;
         for (int id : knownNodes.keySet()) {
-            if (id > predecessorID) {
+            if (id > nodeID) {
                 largest = id;
             }
         }
-        return largest == predecessorID;
+        return largest == nodeID;
     }
 }

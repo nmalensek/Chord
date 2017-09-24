@@ -47,7 +47,7 @@ public class DiscoveryNode implements Node {
 
             NodeInformation messageWithRandomNode = prepareRandomNodeInfoMessage(randomNode);
             sender.sendToSpecificSocket(node.getNodeSocket(), messageWithRandomNode.getBytes());
-            System.out.println("sent node information to remote "  + node.getNodeSocket().getRemoteSocketAddress());
+            System.out.println("sent node information to node " + messageWithRandomNode.getNodeInfo());
         } else {
             Collision collision = new Collision();
             sender.sendToSpecificSocket(node.getNodeSocket(), collision.getBytes());

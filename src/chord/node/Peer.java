@@ -254,7 +254,7 @@ public class Peer implements Node {
     public void processText(String text) {
         switch (text) {
             case "d":
-                System.out.println("Finger table at this node:");
+                System.out.println("Finger table at this node (ID " + peerIdentifier + "):\n");
                 for (int key : fingerTable.keySet()) {
                     NodeRecord currentRow = fingerTable.get(key);
                     System.out.println(key + "\t" + currentRow.getHost() + ":" + currentRow.getPort()

@@ -47,6 +47,7 @@ public class HandleNodeLeaving {
 
         if (newSuccessorID != ID) {
             AskForSuccessor askForSuccessor = new AskForSuccessor();
+            askForSuccessor.setOriginatorInformation(host + ":" + port + ":" + ID);
             sender.sendToSpecificSocket(parent.getKnownNodes().get(newSuccessorID).getNodeSocket(), askForSuccessor.getBytes());
         }
     }
@@ -72,6 +73,7 @@ public class HandleNodeLeaving {
         }
         if (newPredecessorID != ID) {
             AskForSuccessor askForSuccessor = new AskForSuccessor(); //this node is successor of new predecessor, so traverse the ring
+            askForSuccessor.setOriginatorInformation(host + ":" + port + ":" + ID);
             sender.sendToSpecificSocket(parent.getFingerTable().get(1).getNodeSocket(), askForSuccessor.getBytes());
         }
     }

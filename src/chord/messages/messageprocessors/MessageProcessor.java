@@ -10,6 +10,8 @@ import chord.util.SplitHostPort;
 import java.io.File;
 import java.io.IOException;
 import java.net.Socket;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class MessageProcessor {
@@ -76,8 +78,10 @@ public class MessageProcessor {
         } else if (successor.getIdentifier() >= payload && predecessorID < payload) { //Successor is largest, send to there
             forwardLookup(lookupEvent, successor);
         } else if (successor.getIdentifier() >= payload &&
-                fingerTableManagement.predecessorIsLargestConcurrent(parent.getKnownNodes(), predecessorID)) {
+                fingerTableManagement.nodeIsLargestConcurrent(parent.getKnownNodes(), predecessorID)) {
             forwardLookup(lookupEvent, successor); //send to successor if predecessor's the largest node in the overlay
+        } else if (fingerTableManagement.nodeIsLargestConcurrent(parent.getKnownNodes(), ID) && payload > ID) {
+            sendDestinationMessage(lookupEvent, successor.toString(), self.toString());
         }
         else {
             ConcurrentHashMap<Integer, NodeRecord> parentFingerTable = parent.getFingerTable();
@@ -201,6 +205,7 @@ public class MessageProcessor {
         for (int fileKey : fileHashMap.keySet()) {
             if (predecessorID < ID && predecessorID >= fileKey || predecessorID > ID && predecessorID >= fileKey && fileKey > ID) {
                 FilePayload file = new FilePayload();
+
                 file.setFileID(fileKey);
                 file.setFileName(fileHashMap.get(fileKey).getName());
                 file.setFileToTransfer(fileHashMap.get(fileKey));
@@ -208,7 +213,10 @@ public class MessageProcessor {
                 System.out.println("Sending file " + fileKey + " to " + newPredecessor.toString());
                 TCPSender sender = new TCPSender();
                 sender.sendToSpecificSocket(newPredecessor.getNodeSocket(), file.getBytes());
-                fileHashMap.remove(fileKey);
+
+                File transferredFile = fileHashMap.remove(fileKey);
+                Files.delete(Paths.get(transferredFile.getPath()));
+
                 filesTransferred++;
             }
             if (filesTransferred > 0) {
