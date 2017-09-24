@@ -28,35 +28,52 @@ public class HandleNodeLeaving {
         this.parent = parent;
     }
 
-    public void processSuccessorLeaving(NodeLeaving leavingMessage, Socket oldSocket) throws IOException {
-        String[] successorInfo = (leavingMessage.getSuccessorInfo().split(":"));
-        NodeRecord newSuccessor = new NodeRecord(
-                successorInfo[0] + ":" + successorInfo[1],
-                Integer.parseInt(successorInfo[2]),
-                successorInfo[0],
-                oldSocket
-        );
-        newSuccessor.setNodeSocket(new Socket(successorInfo[0], Integer.parseInt(successorInfo[1]))); //set new successor socket to new successor
+    public void processSuccessorLeaving(NodeLeaving leavingMessage) throws IOException {
         parent.getKnownNodes().remove(leavingMessage.getSixteenBitID());
-        parent.getKnownNodes().putIfAbsent(newSuccessor.getIdentifier(), newSuccessor);
-        AskForSuccessor askForSuccessor = new AskForSuccessor();
-        sender.sendToSpecificSocket(newSuccessor.getNodeSocket(), askForSuccessor.getBytes());
+
+        String[] newSuccessorInfo = (leavingMessage.getSuccessorInfo().split(":"));
+        int newSuccessorID = Integer.parseInt(newSuccessorInfo[2]);
+
+        if (parent.getKnownNodes().get(newSuccessorID) == null) {
+                NodeRecord newSuccessor = new NodeRecord(
+                        newSuccessorInfo[0] + ":" + newSuccessorInfo[1],
+                        newSuccessorID, newSuccessorInfo[0],
+                        new Socket(newSuccessorInfo[0], Integer.parseInt(newSuccessorInfo[1]))
+                );
+
+                parent.getKnownNodes().put(newSuccessor.getIdentifier(), newSuccessor);
+        }
+        fingerTableManagement.updateConcurrentFingerTable(ID, parent.getFingerTable(), parent.getKnownNodes());
+
+        if (newSuccessorID != ID) {
+            AskForSuccessor askForSuccessor = new AskForSuccessor();
+            sender.sendToSpecificSocket(parent.getKnownNodes().get(newSuccessorID).getNodeSocket(), askForSuccessor.getBytes());
+        }
     }
 
-    public void processPredecessorLeaving(NodeLeaving leavingMessage, Socket oldSocket) throws IOException {
-        String[] predecessorInfo = (leavingMessage.getSuccessorInfo().split(":"));
-        NodeRecord newPredecessor = new NodeRecord(
-                predecessorInfo[0] + ":" + predecessorInfo[1],
-                Integer.parseInt(predecessorInfo[2]),
-                predecessorInfo[0],
-                oldSocket
-        );
-        newPredecessor.setNodeSocket(new Socket(predecessorInfo[0], Integer.parseInt(predecessorInfo[1]))); //set new predecessor socket to new predecessor
+    public void processPredecessorLeaving(NodeLeaving leavingMessage) throws IOException {
         parent.getKnownNodes().remove(leavingMessage.getSixteenBitID());
-        parent.getKnownNodes().putIfAbsent(newPredecessor.getIdentifier(), newPredecessor);
-        parent.setPredecessor(newPredecessor);
-        AskForSuccessor askForSuccessor = new AskForSuccessor();
-        sender.sendToSpecificSocket(parent.getFingerTable().get(1).getNodeSocket(), askForSuccessor.getBytes());
+
+        String[] newPredecessorInfo = (leavingMessage.getSuccessorInfo().split(":"));
+        int newPredecessorID = Integer.parseInt(newPredecessorInfo[2]);
+
+        NodeRecord newPredecessor;
+        if (parent.getKnownNodes().get(newPredecessorID) == null) {
+            newPredecessor = new NodeRecord(
+                    newPredecessorInfo[0] + ":" + newPredecessorInfo[1],
+                    Integer.parseInt(newPredecessorInfo[2]),
+                    newPredecessorInfo[0],
+                    new Socket(newPredecessorInfo[0], Integer.parseInt(newPredecessorInfo[1]))
+            );
+
+            parent.getKnownNodes().put(newPredecessor.getIdentifier(), newPredecessor);
+        } else {
+            parent.setPredecessor(parent.getKnownNodes().get(newPredecessorID));
+        }
+        if (newPredecessorID != ID) {
+            AskForSuccessor askForSuccessor = new AskForSuccessor(); //this node is successor of new predecessor, so traverse the ring
+            sender.sendToSpecificSocket(parent.getFingerTable().get(1).getNodeSocket(), askForSuccessor.getBytes());
+        }
     }
 
     public void removeDeadNodeAndUpdateFT(Socket errorSocket) { //double check this, may not be able to compare sockets

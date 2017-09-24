@@ -34,6 +34,8 @@ public class Peer implements Node {
     private static String storeDataHostPort;
     private TCPSender sender = new TCPSender();
     private TCPServerThread serverThread;
+    private TextInputThread textInputThread = new TextInputThread(this);
+    private QuerySuccessorThread querySuccessorThread;
     private NodeRecord predecessor;
     private MessageProcessor messageProcessor;
     private HandleNodeLeaving handleNodeLeaving;
@@ -46,6 +48,7 @@ public class Peer implements Node {
     private AtomicBoolean fingerTableModified = new AtomicBoolean();
     private AtomicBoolean filesResponsibleForModified = new AtomicBoolean();
     private SplitHostPort split = new SplitHostPort();
+//    static volatile boolean running = true;
 
     public Peer() throws IOException {
         startServer();
@@ -85,10 +88,9 @@ public class Peer implements Node {
         DiagnosticPrinterThread diagnosticPrinterThread =
                 new DiagnosticPrinterThread(this, diagnosticInterval);
         diagnosticPrinterThread.start();
-        QuerySuccessorThread querySuccessorThread =
+        querySuccessorThread =
                 new QuerySuccessorThread(this, queryInterval, peerHost, peerPort, nodeIdentifier);
         querySuccessorThread.start();
-        TextInputThread textInputThread = new TextInputThread(this);
         textInputThread.start();
     }
 
@@ -108,8 +110,13 @@ public class Peer implements Node {
     }
 
     private synchronized void addShutDownHook() {
-        Runtime.getRuntime().addShutdownHook(new ShutdownHook(sender, this,
-                nodeIdentifier, discoveryNodeSocket));
+        final Thread mainThread = Thread.currentThread();
+        ShutdownHook hook = new ShutdownHook(sender, this,
+                nodeIdentifier, discoveryNodeSocket, mainThread);
+        hook.addThreadToInterrupt(textInputThread);
+        hook.addThreadToInterrupt(querySuccessorThread);
+        Runtime.getRuntime().addShutdownHook(hook);
+
     }
 
     @Override
@@ -153,12 +160,15 @@ public class Peer implements Node {
                 }
             } else if (event instanceof UpdatePredecessor) {
                 messageProcessor.processPredecessorUpdate((UpdatePredecessor) event, filesResponsibleFor);
-//            } else if (event instanceof NodeLeaving) {
-//                if (fingerTable.get(1).getIdentifier() == (((NodeLeaving) event).getSixteenBitID())) { //successor left
-//                    handleNodeLeaving.processSuccessorLeaving((NodeLeaving) event, destinationSocket);
-//                } else {
-//                    handleNodeLeaving.processPredecessorLeaving((NodeLeaving) event, destinationSocket);
-//                }
+            } else if (event instanceof NodeLeaving) {
+                System.out.println("A node is leaving :(");
+                if (fingerTable.get(1).getIdentifier() == (((NodeLeaving) event).getSixteenBitID())) { //successor left
+                    handleNodeLeaving.processSuccessorLeaving((NodeLeaving) event);
+                }
+                if (predecessor.getIdentifier() == ((NodeLeaving) event).getSixteenBitID()) { //predecessor left
+                    handleNodeLeaving.processPredecessorLeaving((NodeLeaving) event);
+                }
+                System.out.println("Node left :(");
             } else if (event instanceof SuccessorInformation) {
                 messageProcessor.processSuccessorInformation((SuccessorInformation) event);
             } else if (event instanceof AskForSuccessor) {
@@ -201,9 +211,17 @@ public class Peer implements Node {
         }
     }
 
-    public ConcurrentHashMap<Integer, NodeRecord> getFingerTable() { return fingerTable; }
-    public ConcurrentHashMap<Integer, File> getFilesResponsibleFor() { return filesResponsibleFor; }
-    public ConcurrentHashMap<Integer, NodeRecord> getKnownNodes() { return knownNodes; }
+    public ConcurrentHashMap<Integer, NodeRecord> getFingerTable() {
+        return fingerTable;
+    }
+
+    public ConcurrentHashMap<Integer, File> getFilesResponsibleFor() {
+        return filesResponsibleFor;
+    }
+
+    public ConcurrentHashMap<Integer, NodeRecord> getKnownNodes() {
+        return knownNodes;
+    }
 
     public NodeRecord getPredecessor() {
         synchronized (predecessor) {

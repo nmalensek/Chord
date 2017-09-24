@@ -75,8 +75,6 @@ public class DiagnosticPrinterThread extends Thread {
                 "\t" + predecessor.getNickname() + "\t" + predecessor.getPort());
     }
 
-    //TODO find out why predecessor's ID is being set to its port sometimes
-
     @Override
     public void run() {
 //        try {
