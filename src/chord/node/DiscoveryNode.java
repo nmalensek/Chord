@@ -88,7 +88,6 @@ public class DiscoveryNode implements Node {
         }
         System.out.println(removedNode.getNickname() +
                 " (ID: " + removedNode.getIdentifier() + ") has left the overlay.");
-        removedNode = null;
     }
 
     private synchronized NodeRecord constructNewNode(Event event, Socket newSocket) throws IOException {
