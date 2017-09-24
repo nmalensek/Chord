@@ -49,7 +49,6 @@ public class StoreData implements Node {
     @Override
     public void onEvent(Event event, Socket destinationSocket) throws IOException {
         if (event instanceof NodeInformation) { //gets random peer from DiscoveryNode to send lookup message
-            System.out.println("got node information");
             Lookup lookup = new Lookup();
             lookup.setPayloadID(fileID);
             lookup.setRoutingPath(thisNodeHost + ":" + thisNodePort + ":" + 99999 + ",");
@@ -60,7 +59,7 @@ public class StoreData implements Node {
             DestinationNode destination = (DestinationNode) event;
             FilePayload file = new FilePayload();
             file.setFileID(fileID);
-            file.setFileName(filePath.getFileName().toString());
+            file.setFileName("nmalensk_" + filePath.getFileName().toString());
             file.setFileToTransfer(new File(filePath.toString()));
             file.setSendingNodeHostPort(thisNodeHost + ":" + thisNodePort);
             System.out.println("Sending file " + fileID + " to " + destination.getDestinationNode());
@@ -95,7 +94,7 @@ public class StoreData implements Node {
                     inquiry.setSixteenBitID(fileID);
                     sender.sendToSpecificSocket(discoveryNodeSocket, inquiry.getBytes());
                 } catch (StringIndexOutOfBoundsException | NumberFormatException | ArrayIndexOutOfBoundsException e) {
-                    System.out.println("Could not generate ID from the supplied filename, please rename and try again");
+                    System.out.println("Could not generate ID from the supplied filename, please specify a new ID or rename and try again");
                     System.out.println("Usage: file [filePath] [optional fileID]");
                 }
                 break;

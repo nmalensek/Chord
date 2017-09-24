@@ -23,7 +23,7 @@ public class MessageProcessor {
     private FingerTableManagement fingerTableManagement = new FingerTableManagement();
     private SplitHostPort split = new SplitHostPort();
     private Socket parentSocket;
-    private String storageDirectory = "/Users/nicholas/Desktop/";
+    private String storageDirectory = "/tmp/";
     private static int storeDataID = 99999;
     private Socket storeDataSocket;
 
