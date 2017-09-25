@@ -5,6 +5,7 @@ import java.io.*;
 public class DeadNode implements Protocol, Event {
     private int messageType = DEAD_NODE;
     private String deadNode;
+    private int deadNodeID;
     private String origin;
 
     public DeadNode getType() {
@@ -16,6 +17,9 @@ public class DeadNode implements Protocol, Event {
 
     public String getOrigin() { return origin; }
     public void setOrigin(String origin) { this.origin = origin; }
+
+    public int getDeadNodeID() { return deadNodeID; }
+    public void setDeadNodeID(int deadNodeID) { this.deadNodeID = deadNodeID; }
 
     @Override
     public int getMessageType() {
@@ -30,16 +34,17 @@ public class DeadNode implements Protocol, Event {
                 new DataOutputStream(new BufferedOutputStream(byteArrayOutputStream));
 
         dataOutputStream.writeInt(messageType);
+        dataOutputStream.writeInt(deadNodeID);
 
-        byte[] deadNodeBytes = deadNode.getBytes();
-        int deadNodeLength = deadNodeBytes.length;
-        dataOutputStream.writeInt(deadNodeLength);
-        dataOutputStream.write(deadNodeBytes);
-
-        byte[] originBytes = origin.getBytes();
-        int originLength = originBytes.length;
-        dataOutputStream.writeInt(originLength);
-        dataOutputStream.write(originBytes);
+//        byte[] deadNodeBytes = deadNode.getBytes();
+//        int deadNodeLength = deadNodeBytes.length;
+//        dataOutputStream.writeInt(deadNodeLength);
+//        dataOutputStream.write(deadNodeBytes);
+//
+//        byte[] originBytes = origin.getBytes();
+//        int originLength = originBytes.length;
+//        dataOutputStream.writeInt(originLength);
+//        dataOutputStream.write(originBytes);
 
         dataOutputStream.flush();
         marshalledBytes = byteArrayOutputStream.toByteArray();
@@ -57,18 +62,19 @@ public class DeadNode implements Protocol, Event {
                 new DataInputStream(new BufferedInputStream(byteArrayInputStream));
 
         messageType = dataInputStream.readInt();
+        deadNodeID = dataInputStream.readInt();
 
-        int deadNodeLength = dataInputStream.readInt();
-        byte[] deadNodeBytes = new byte[deadNodeLength];
-        dataInputStream.readFully(deadNodeBytes);
-
-        deadNode = new String(deadNodeBytes);
-
-        int originBytesLength = dataInputStream.readInt();
-        byte[] originNodeBytes = new byte[originBytesLength];
-        dataInputStream.readFully(originNodeBytes);
-
-        origin = new String(originNodeBytes);
+//        int deadNodeLength = dataInputStream.readInt();
+//        byte[] deadNodeBytes = new byte[deadNodeLength];
+//        dataInputStream.readFully(deadNodeBytes);
+//
+//        deadNode = new String(deadNodeBytes);
+//
+//        int originBytesLength = dataInputStream.readInt();
+//        byte[] originNodeBytes = new byte[originBytesLength];
+//        dataInputStream.readFully(originNodeBytes);
+//
+//        origin = new String(originNodeBytes);
 
         byteArrayInputStream.close();
         dataInputStream.close();

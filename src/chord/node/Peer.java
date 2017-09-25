@@ -172,6 +172,8 @@ public class Peer implements Node {
             } else if (event instanceof AskForSuccessor) {
                 messageProcessor.sendSuccessorInformation(fingerTable.get(1), (AskForSuccessor) event, null);
                 messageProcessor.checkIfUnknownNode((AskForSuccessor) event);
+            } else if (event instanceof DeadNode) {
+                handleNodeLeaving.removeDeadNodeUpdateFTAndForward((DeadNode) event);
             }
     }
 

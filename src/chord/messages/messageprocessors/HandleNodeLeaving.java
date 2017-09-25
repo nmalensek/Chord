@@ -1,6 +1,7 @@
 package chord.messages.messageprocessors;
 
 import chord.messages.AskForSuccessor;
+import chord.messages.DeadNode;
 import chord.messages.Lookup;
 import chord.messages.NodeLeaving;
 import chord.node.NodeRecord;
@@ -55,7 +56,7 @@ public class HandleNodeLeaving {
     public void processPredecessorLeaving(NodeLeaving leavingMessage) throws IOException {
         parent.getKnownNodes().remove(leavingMessage.getSixteenBitID());
 
-        String[] newPredecessorInfo = (leavingMessage.getSuccessorInfo().split(":"));
+        String[] newPredecessorInfo = (leavingMessage.getPredecessorInfo().split(":"));
         int newPredecessorID = Integer.parseInt(newPredecessorInfo[2]);
 
         NodeRecord newPredecessor;
@@ -72,26 +73,21 @@ public class HandleNodeLeaving {
             parent.setPredecessor(parent.getKnownNodes().get(newPredecessorID));
         }
         if (newPredecessorID != ID) {
-            AskForSuccessor askForSuccessor = new AskForSuccessor(); //this node is successor of new predecessor, so traverse the ring
-            askForSuccessor.setOriginatorInformation(host + ":" + port + ":" + ID);
-            sender.sendToSpecificSocket(parent.getFingerTable().get(1).getNodeSocket(), askForSuccessor.getBytes());
+//            AskForSuccessor askForSuccessor = new AskForSuccessor(); //this node is successor of new predecessor, so traverse the ring
+//            askForSuccessor.setOriginatorInformation(host + ":" + port + ":" + ID);
+//            sender.sendToSpecificSocket(parent.getFingerTable().get(1).getNodeSocket(), askForSuccessor.getBytes());
+            DeadNode deadNode = new DeadNode();
+            deadNode.setDeadNodeID(leavingMessage.getSixteenBitID());
+            sender.sendToSpecificSocket(parent.getFingerTable().get(1).getNodeSocket(), deadNode.getBytes());
         }
     }
 
-    public void removeDeadNodeAndUpdateFT(Socket errorSocket) { //double check this, may not be able to compare sockets
-        for (NodeRecord node : parent.getKnownNodes().values()) {
-            if (node.getNodeSocket().equals(errorSocket)) {
-                parent.getKnownNodes().remove(node.getIdentifier());
-            }
-        }
-        try {
-            AskForSuccessor askForSuccessor = new AskForSuccessor();
-            sender.sendToSpecificSocket(parent.getFingerTable().get(1).getNodeSocket(), askForSuccessor.getBytes());
-        } catch (IOException e) {
-            parent.getKnownNodes().remove(parent.getFingerTable().get(1).getIdentifier()); //can't contact successor, find yourself again
-            Lookup lookup = new Lookup();
-            lookup.setPayloadID(ID);
-            lookup.setRoutingPath(host + ":" + port + ",");
+    public synchronized void removeDeadNodeUpdateFTAndForward(DeadNode deadNode) throws IOException {
+        NodeRecord attemptedRemoval = null;
+        attemptedRemoval = parent.getKnownNodes().remove(deadNode.getDeadNodeID());
+        if (attemptedRemoval != null) {
+            fingerTableManagement.updateConcurrentFingerTable(ID, parent.getFingerTable(), parent.getKnownNodes());
+            sender.sendToSpecificSocket(parent.getFingerTable().get(1).getNodeSocket(), deadNode.getBytes());
         }
     }
 
