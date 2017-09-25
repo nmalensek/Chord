@@ -87,9 +87,9 @@ public class Peer implements Node {
         TCPReceiverThread storeDataReceiver = new TCPReceiverThread(storeDataSocket, this);
         discoveryNodeReceiver.start();
         storeDataReceiver.start();
-        DiagnosticPrinterThread diagnosticPrinterThread =
-                new DiagnosticPrinterThread(this, diagnosticInterval);
-        diagnosticPrinterThread.start();
+//        DiagnosticPrinterThread diagnosticPrinterThread =
+//                new DiagnosticPrinterThread(this, diagnosticInterval);
+//        diagnosticPrinterThread.start();
         querySuccessorThread =
                 new QuerySuccessorThread(this, queryInterval, peerHost, peerPort, peerIdentifier);
         querySuccessorThread.start();
@@ -123,12 +123,11 @@ public class Peer implements Node {
 
     @Override
     public void onEvent(Event event, Socket destinationSocket) throws IOException {
-        try {
             if (event instanceof NodeInformation) {
                 NodeInformation information = (NodeInformation) event;
                 messageProcessor.processRegistration(information);
                 addShutDownHook();
-                System.out.println("Added shutdown hook");
+//                System.out.println("Added shutdown hook");
             } else if (event instanceof Collision) {
                 System.out.println("This node's ID already exists in the overlay. Please enter a new one:");
                 promptForNewID();
@@ -138,7 +137,6 @@ public class Peer implements Node {
             } else if (event instanceof Lookup) {
                 messageProcessor.processLookup(((Lookup) event), predecessor);
             } else if (event instanceof FilePayload) {
-                System.out.println("got file payload");
                 messageProcessor.processPayload((FilePayload) event, filesResponsibleFor);
             } else if (event instanceof Query) {
                 if (predecessor.getNodeSocket() != null) {
@@ -175,10 +173,6 @@ public class Peer implements Node {
                 messageProcessor.sendSuccessorInformation(fingerTable.get(1), (AskForSuccessor) event, null);
                 messageProcessor.checkIfUnknownNode((AskForSuccessor) event);
             }
-        } catch (IOException e) {
-            e.printStackTrace();
-//            handleNodeLeaving.removeDeadNodeAndUpdateFT(destinationSocket);
-        }
     }
 
     private synchronized QueryResponse writeQueryResponse() throws IOException {

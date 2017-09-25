@@ -11,14 +11,10 @@ import java.net.Socket;
 public class TCPSender {
 
     public synchronized void sendToSpecificSocket(Socket socket, byte[] data) throws IOException {
-        try {
             int dataLength = data.length;
             DataOutputStream outputStream = new DataOutputStream(socket.getOutputStream());
             outputStream.writeInt(dataLength);
             outputStream.write(data, 0, dataLength);
             outputStream.flush();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
     }
 }

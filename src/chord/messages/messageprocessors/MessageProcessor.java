@@ -11,6 +11,7 @@ import java.io.File;
 import java.io.IOException;
 import java.net.ConnectException;
 import java.net.Socket;
+import java.net.SocketException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.concurrent.ConcurrentHashMap;
@@ -79,6 +80,9 @@ public class MessageProcessor {
         } else if (fingerTableManagement.nodeIsSmallestConcurrent(parent.getKnownNodes(), ID)
                 && payload < ID && predecessorID > ID) {
             sendDestinationMessage(lookupEvent, self.toString(), predecessor.toString());
+        } else if (fingerTableManagement.nodeIsSmallestConcurrent(parent.getKnownNodes(), ID)
+                && payload > predecessorID && fingerTableManagement.nodeIsLargestConcurrent(parent.getKnownNodes(), predecessorID)) {
+            sendDestinationMessage(lookupEvent, self.toString(), predecessor.toString());
         } else if (successor.getIdentifier() >= payload && predecessorID < payload) { //Successor is largest, send to there
             forwardLookup(lookupEvent, successor);
         } else if (successor.getIdentifier() >= payload &&
@@ -113,8 +117,8 @@ public class MessageProcessor {
         thisNodeIsSink.setDestinationNode(successorHostPortID);
         thisNodeIsSink.setDestinationPredecessor(predecessorHostPortID);
         thisNodeIsSink.setOrigin(self.toString());
-        System.out.println("sent destination message with predecessor information of "
-        + thisNodeIsSink.getDestinationPredecessor() + "\nand successor information: " + thisNodeIsSink.getDestinationNode());
+//        System.out.println("sent destination message with predecessor information of "
+//        + thisNodeIsSink.getDestinationPredecessor() + "\nand successor information: " + thisNodeIsSink.getDestinationNode());
 
         String originatingNode = lookup.getRoutingPath().split(",")[0];
         String originatingHost = split.getHost(originatingNode);
@@ -150,7 +154,7 @@ public class MessageProcessor {
             sender.sendToSpecificSocket(targetNodeSocket, lookup.getBytes());
             System.out.println("Forwarding lookup message to " + forwardTarget);
             System.out.println("Hops: " + lookup.getNumHops() + "\tfor id: " + lookup.getPayloadID());
-        } catch (NullPointerException npe) {
+        } catch (NullPointerException | SocketException e) {
             lookup.setNumHops((lookup.getNumHops() - 1));
             parent.getKnownNodes().remove(forwardTarget.getIdentifier());
             fingerTableManagement.updateConcurrentFingerTable(ID, parent.getFingerTable(), parent.getKnownNodes());
@@ -247,13 +251,13 @@ public class MessageProcessor {
         successorInformation.setSuccessorInfo(successor.toString());
 
         if (destinationSocket == null) {
-            System.out.println("sending on ask for successor message");
+//            System.out.println("sending on ask for successor message");
             String senderHost = split.getHost(message.getOriginatorInformation());
             int senderPort = split.getPort(message.getOriginatorInformation());
             Socket senderSocket = new Socket(senderHost, senderPort);
             sender.sendToSpecificSocket(senderSocket, successorInformation.getBytes());
         } else {
-            System.out.println("sending on original join");
+//            System.out.println("sending on original join");
             sender.sendToSpecificSocket(destinationSocket, successorInformation.getBytes());
         }
     }
@@ -268,7 +272,7 @@ public class MessageProcessor {
 
             NodeRecord successorNode;
             if (parent.getKnownNodes().get(successorID) == null) {
-                System.out.println("ADDING NEW NODE INFORMATION");
+                System.out.println("Adding information about another node in the overlay...");
                 Socket successorSocket = new Socket(split.getHost(successorHostPort),
                         split.getPort(successorHostPort));
                 successorNode = new NodeRecord(successorHostPort, successorID, successorNickname, successorSocket);

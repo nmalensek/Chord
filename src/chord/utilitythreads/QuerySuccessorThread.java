@@ -4,9 +4,11 @@ import chord.messages.Query;
 import chord.node.NodeRecord;
 import chord.node.Peer;
 import chord.transport.TCPSender;
+import chord.util.FingerTableManagement;
 
 import java.io.IOException;
 import java.net.Socket;
+import java.net.SocketException;
 
 public class QuerySuccessorThread extends Thread {
 
@@ -15,7 +17,8 @@ public class QuerySuccessorThread extends Thread {
     private String ownerHost;
     private int ownerPort;
     private int ownerID;
-    TCPSender sender = new TCPSender();
+    private TCPSender sender = new TCPSender();
+    private FingerTableManagement fingerTableManagement = new FingerTableManagement();
 
     public QuerySuccessorThread(Peer owner, int queryInterval, String ownerHost, int ownerPort, int ownerID) {
         this.owner = owner;
@@ -26,17 +29,21 @@ public class QuerySuccessorThread extends Thread {
     }
 
     private void queryOwnerSuccessor() {
+        NodeRecord successor = null;
         try {
-            NodeRecord successor = owner.getFingerTable().get(1);
+            successor = owner.getFingerTable().get(1);
             Query query = new Query();
             query.setSenderInfo(ownerHost + ":" + ownerPort + ":" + ownerID);
             sender.sendToSpecificSocket(successor.getNodeSocket(), query.getBytes());
-            System.out.println("Sent a message to " + successor.toString());
+//            System.out.println("Sent a message to " + successor.toString());
 //            System.out.println("sent a query");
         } catch (IOException e) {
-            System.out.println("Could not contact successor, message was not sent.");
+            System.out.println("Could not contact successor, message was not sent. Updating known nodes and finger table.");
+            owner.getKnownNodes().remove(successor.getIdentifier());
+            owner.getFingerTable().remove(successor.getIdentifier());
+            fingerTableManagement.updateConcurrentFingerTable(ownerID, owner.getFingerTable(), owner.getKnownNodes());
         } catch (NullPointerException npe) {
-            System.out.println("Successor: " + ownerHost + ":" + ownerPort);
+//            System.out.println("Successor: " + ownerHost + ":" + ownerPort);
         }
 
     }
