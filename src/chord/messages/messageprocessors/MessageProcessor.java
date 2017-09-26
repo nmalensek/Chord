@@ -90,6 +90,10 @@ public class MessageProcessor {
             forwardLookup(lookupEvent, successor); //send to successor if predecessor's the largest node in the overlay
         } else if (fingerTableManagement.nodeIsLargestConcurrent(parent.getKnownNodes(), ID) && payload > ID) {
             sendDestinationMessage(lookupEvent, successor.toString(), self.toString());
+        } else if (fingerTableManagement.nodeIsLargestConcurrent(parent.getKnownNodes(), ID)
+                && fingerTableManagement.nodeIsSmallestConcurrent(parent.getKnownNodes(), successor.getIdentifier())
+                && successor.getIdentifier() >= payload) { //successor is destination if this node is largest and payload's < successor
+            sendDestinationMessage(lookupEvent, successor.toString(), self.toString());
         }
         else {
             ConcurrentHashMap<Integer, NodeRecord> parentFingerTable = parent.getFingerTable();
@@ -127,7 +131,14 @@ public class MessageProcessor {
         Socket requestorSocket = checkIfKnown(originatingHost, originatingPort, originatingID);
 
         sender.sendToSpecificSocket(requestorSocket, thisNodeIsSink.getBytes());
-        System.out.println("Routing: " + lookup.getRoutingPath() + " " + self.toString());
+        String[] routingPath = lookup.getRoutingPath().split(",");
+        StringBuilder routeBuilder = new StringBuilder();
+        for (int i = 1; i < routingPath.length; i++) {
+            routeBuilder.append(routingPath[i]);
+            routeBuilder.append(",");
+        }
+        System.out.println("Destination for payload: " + lookup.getPayloadID());
+        System.out.println("Route: " + routeBuilder + self.toString());
         System.out.println("Hops: " + (lookup.getNumHops() + 1));
     }
 
@@ -194,9 +205,7 @@ public class MessageProcessor {
             sender.sendToSpecificSocket(successorNode.getNodeSocket(), updatePredecessor.getBytes());
 
         fingerTableManagement.updateConcurrentFingerTable(ID, parent.getFingerTable(), parent.getKnownNodes());
-        fingerTableManagement.printConcurrentFingerTable(parent.getFingerTable());
-
-
+//        fingerTableManagement.printConcurrentFingerTable(parent.getFingerTable());
     }
 
     public synchronized void processPredecessorUpdate(UpdatePredecessor updatePredecessor,

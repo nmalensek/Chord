@@ -270,7 +270,7 @@ public class Peer implements Node {
                 }
                 System.out.println("Known nodes: ");
                 for (int node : knownNodes.keySet()) {
-                    System.out.printf(knownNodes.get(node) + "\t");
+                    System.out.println(knownNodes.get(node));
                 }
                 System.out.println("");
                 break;
@@ -302,10 +302,10 @@ public class Peer implements Node {
 
         peerHost = Inet4Address.getLocalHost().getHostName();
         queryInterval = Integer.parseInt(args[1]);
-        diagnosticInterval = Integer.parseInt(args[2]);
-        discoveryNodeHost = args[3];
-        discoveryNodePort = Integer.parseInt(args[4]);
-        storeDataHostPort = args[5];
+//        diagnosticInterval = Integer.parseInt(args[2]);
+        discoveryNodeHost = args[2];
+        discoveryNodePort = Integer.parseInt(args[3]);
+        storeDataHostPort = args[4];
 
         try {
             Peer peer = new Peer();
