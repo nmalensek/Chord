@@ -331,14 +331,20 @@ public class MessageProcessor {
 
     public synchronized void updateSuccessor(QueryResponse queryResponse) throws IOException {
         String newSuccessorHostPort = split.getHostPort(queryResponse.getPredecessorInfo());
-        Socket newSuccessorSocket = new Socket(split.getHost(newSuccessorHostPort), split.getPort(newSuccessorHostPort));
-        NodeRecord updatedSuccessor =
-                new NodeRecord(newSuccessorHostPort,
-                        split.getID(queryResponse.getPredecessorInfo()),
-                        split.getHost(queryResponse.getPredecessorInfo()), newSuccessorSocket);
-        parent.getKnownNodes().put(split.getID(queryResponse.getPredecessorInfo()), updatedSuccessor);
+        int newSuccessorID = split.getID(queryResponse.getPredecessorInfo());
+
+        if (parent.getKnownNodes().get(newSuccessorID) != null) {
+            //if node's already known (and it should be), don't do anything but update FT
+        } else {
+            Socket newSuccessorSocket = new Socket(split.getHost(newSuccessorHostPort), split.getPort(newSuccessorHostPort));
+            NodeRecord updatedSuccessor =
+                    new NodeRecord(newSuccessorHostPort,
+                            split.getID(queryResponse.getPredecessorInfo()),
+                            split.getHost(queryResponse.getPredecessorInfo()), newSuccessorSocket);
+            parent.getKnownNodes().put(split.getID(queryResponse.getPredecessorInfo()), updatedSuccessor);
+        }
+
         fingerTableManagement.updateConcurrentFingerTable(ID, parent.getFingerTable(), parent.getKnownNodes());
-        parent.setFingerTableModified(true);
         //don't necessarily have to do below unless we need to update overlay super fast
 //        Query queryNewSuccessor = new Query(); //check if this node is successor to new node
 //        sender.sendToSpecificSocket(updatedSuccessor.getNodeSocket(), queryNewSuccessor.getBytes());
