@@ -301,15 +301,20 @@ public class Peer implements Node {
 
         peerHost = Inet4Address.getLocalHost().getHostName();
         queryInterval = Integer.parseInt(args[1]);
-//        diagnosticInterval = Integer.parseInt(args[2]);
         discoveryNodeHost = args[2];
         discoveryNodePort = Integer.parseInt(args[3]);
         storeDataHostPort = args[4];
 
-        try {
-            Peer peer = new Peer();
-        } catch (IOException e) {
-            e.printStackTrace();
+        if (args.length != 5) {
+            System.out.println("Usage: [ID or \"na\"] [successor query frequency (ms)] [DiscoveryNode host]" +
+                    "\n [DiscoveryNode port] [StoreData host:port]");
+        } else {
+            try {
+                Peer peer = new Peer();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
+
     }
 }

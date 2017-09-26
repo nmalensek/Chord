@@ -130,7 +130,12 @@ public class DiscoveryNode implements Node {
         storeDataHost = args[1];
         storeDataPort = Integer.parseInt(args[2]);
 
-        DiscoveryNode discoveryNode = new DiscoveryNode();
-        discoveryNode.startup();
+        if (args.length != 3) {
+            System.out.println("Usage: [DiscoveryNode port] [StoreData host] [StoreData port]");
+        } else {
+            DiscoveryNode discoveryNode = new DiscoveryNode();
+            discoveryNode.startup();
+        }
+
     }
 }

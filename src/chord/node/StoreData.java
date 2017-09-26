@@ -111,11 +111,16 @@ public class StoreData implements Node {
         discoveryNodePort = Integer.parseInt(args[1]);
         thisNodePort = Integer.parseInt(args[2]);
 
-        try {
-            StoreData storeData = new StoreData();
-            storeData.startup();
-        } catch (IOException e) {
-            e.printStackTrace();
+        if (args.length != 3) {
+            System.out.println("Usage: [DiscoveryNode host] [DiscoveryNode port] [StoreData port]");
+        } else {
+            try {
+                StoreData storeData = new StoreData();
+                storeData.startup();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
+
     }
 }
