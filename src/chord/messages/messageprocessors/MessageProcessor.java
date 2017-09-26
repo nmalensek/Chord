@@ -340,12 +340,4 @@ public class MessageProcessor {
 //        Query queryNewSuccessor = new Query(); //check if this node is successor to new node
 //        sender.sendToSpecificSocket(updatedSuccessor.getNodeSocket(), queryNewSuccessor.getBytes());
     }
-
-    private synchronized void sendDeadNodeMessage(String deadNodeInfo, String targetNode) throws IOException {
-        DeadNode deadNode = new DeadNode();
-        deadNode.setDeadNode(deadNodeInfo);
-        deadNode.setOrigin(self.toString());
-        Socket targetSocket = new Socket(split.getHost(targetNode), split.getPort(targetNode));
-        sender.sendToSpecificSocket(targetSocket, deadNode.getBytes());
-    }
 }

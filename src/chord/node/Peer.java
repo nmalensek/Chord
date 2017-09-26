@@ -74,23 +74,33 @@ public class Peer implements Node {
         }
     }
 
+    /**
+     * Starts TCPReceiver threads for utility nodes and text input thread.
+     * @throws IOException
+     */
     private void startUtilityThreads() throws IOException {
         TCPReceiverThread discoveryNodeReceiver = new TCPReceiverThread(discoveryNodeSocket, this);
         TCPReceiverThread storeDataReceiver = new TCPReceiverThread(storeDataSocket, this);
         discoveryNodeReceiver.start();
         storeDataReceiver.start();
-//        DiagnosticPrinterThread diagnosticPrinterThread =
-//                new DiagnosticPrinterThread(this, diagnosticInterval);
-//        diagnosticPrinterThread.start();
         textInputThread.start();
     }
 
+    /**
+     * Prepares information about this node to send to the discovery node for registration in the overlay.
+     * @throws IOException
+     */
     private void connectToNetwork() throws IOException {
         NodeInformation nodeInformation = new NodeInformation();
         nodeInformation.setNodeInfo(peerHost + ":" + peerPort + ":" + peerIdentifier);
         sender.sendToSpecificSocket(discoveryNodeSocket, nodeInformation.getBytes());
     }
 
+    /**
+     * Constructs initial finger table consisting only of this node's ID.
+     * Probably not necessary due to the many layers of lookup corner case handling.
+     * @throws IOException
+     */
     private void constructInitialFingerTable() throws IOException {
         NodeRecord thisNode = new NodeRecord(peerHost + ":" + peerPort,
                 peerIdentifier, Inet4Address.getLocalHost().getHostName(), null);
@@ -99,17 +109,24 @@ public class Peer implements Node {
         }
     }
 
+    /**
+     * Adds custom shutdown hook.
+     */
     private synchronized void addShutDownHook() {
         final Thread mainThread = Thread.currentThread();
         ShutdownHook hook = new ShutdownHook(sender, this,
                 peerIdentifier, discoveryNodeSocket, mainThread);
-        hook.addThreadToInterrupt(textInputThread);
-        hook.addThreadToInterrupt(querySuccessorThread);
+//        hook.addThreadToInterrupt(textInputThread);
+//        hook.addThreadToInterrupt(querySuccessorThread);
         Runtime.getRuntime().addShutdownHook(hook);
 
     }
 
-    //Only construct processors and querying thread after no collision's encountered so their knowledge of this node's ID is correct
+    /**
+     * Constructs processors and querying thread after no collision's encountered so their knowledge
+     * of this node's ID is correct
+     * @throws IOException
+     */
     private synchronized void initializeIDDependentClasses() throws IOException {
         messageProcessor = new MessageProcessor(peerHost, peerPort, peerIdentifier, this, null, storeDataSocket);
         handleNodeLeaving = new HandleNodeLeaving(peerHost, peerPort, peerIdentifier, this);
@@ -175,6 +192,11 @@ public class Peer implements Node {
             }
     }
 
+    /**
+     * Writes the response to a QuerySuccessorThread Query message.
+     * @return this node's predecessor.
+     * @throws IOException
+     */
     private synchronized QueryResponse writeQueryResponse() throws IOException {
         QueryResponse queryResponse = new QueryResponse();
         queryResponse.setPredecessorInfo(predecessor.toString());
@@ -182,6 +204,10 @@ public class Peer implements Node {
         return queryResponse;
     }
 
+    /**
+     * Sends any files a new successor should be responsible for instead of this node to that successor.
+     * @throws IOException
+     */
     public synchronized void sendFilesToSuccessor() throws IOException {
         for (int fileKey : filesResponsibleFor.keySet()) {
             FilePayload file = new FilePayload();

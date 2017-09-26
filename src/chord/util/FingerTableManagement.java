@@ -65,6 +65,13 @@ public class FingerTableManagement {
         return largest == predecessorID;
     }
 
+    /**
+     * Constructs finger table for a node.
+     * @param ID The ID of the node.
+     * @param fingerTable The hashmap to store the finger table.
+     * @param knownNodes All nodes in the overlay that this node's aware of. Node information's maintained
+     *                   aggressively in this implementation, so it should contain all nodes in the overlay.
+     */
     public synchronized void updateConcurrentFingerTable(int ID, ConcurrentHashMap<Integer, NodeRecord> fingerTable, ConcurrentHashMap<Integer, NodeRecord> knownNodes) {
         for (int i = 1; i < 17; i++) {
             int k = ID + (powersOfTwo.get(i)); //get the row value

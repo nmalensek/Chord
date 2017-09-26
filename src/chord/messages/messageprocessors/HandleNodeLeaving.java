@@ -2,7 +2,6 @@ package chord.messages.messageprocessors;
 
 import chord.messages.AskForSuccessor;
 import chord.messages.DeadNode;
-import chord.messages.Lookup;
 import chord.messages.NodeLeaving;
 import chord.node.NodeRecord;
 import chord.node.Peer;
@@ -11,7 +10,6 @@ import chord.util.FingerTableManagement;
 
 import java.io.IOException;
 import java.net.Socket;
-import java.util.HashMap;
 
 public class HandleNodeLeaving {
 
@@ -29,6 +27,14 @@ public class HandleNodeLeaving {
         this.parent = parent;
     }
 
+    /**
+     * Successor left, so either add new successor to known nodes and update finger table
+     * or just update the finger table. Removes node that's leaving from known nodes.
+     * After updating, the node asks all other nodes in the ring who their successor is
+     * to make sure it still has the most current information.
+     * @param leavingMessage message containing leaving node's information.
+     * @throws IOException
+     */
     public void processSuccessorLeaving(NodeLeaving leavingMessage) throws IOException {
         parent.getKnownNodes().remove(leavingMessage.getSixteenBitID());
 
@@ -53,6 +59,14 @@ public class HandleNodeLeaving {
         }
     }
 
+    /**
+     * Either registers new node as predecessor and updates finger table or just sets the
+     * known node as its predecessors and updates finger table. Node then sends information
+     * about the dead node to its successor, since it otherwise might not have known about
+     * the node dying. Finger tables are aggressively maintained as a result.
+     * @param leavingMessage message from leaving node.
+     * @throws IOException
+     */
     public void processPredecessorLeaving(NodeLeaving leavingMessage) throws IOException {
         parent.getKnownNodes().remove(leavingMessage.getSixteenBitID());
 
@@ -73,9 +87,6 @@ public class HandleNodeLeaving {
             parent.setPredecessor(parent.getKnownNodes().get(newPredecessorID));
         }
         if (newPredecessorID != ID) {
-//            AskForSuccessor askForSuccessor = new AskForSuccessor(); //this node is successor of new predecessor, so traverse the ring
-//            askForSuccessor.setOriginatorInformation(host + ":" + port + ":" + ID);
-//            sender.sendToSpecificSocket(parent.getFingerTable().get(1).getNodeSocket(), askForSuccessor.getBytes());
             DeadNode deadNode = new DeadNode();
             deadNode.setDeadNodeID(leavingMessage.getSixteenBitID());
             sender.sendToSpecificSocket(parent.getFingerTable().get(1).getNodeSocket(), deadNode.getBytes());
@@ -83,6 +94,13 @@ public class HandleNodeLeaving {
         fingerTableManagement.updateConcurrentFingerTable(ID, parent.getFingerTable(), parent.getKnownNodes());
     }
 
+    /**
+     * If a node receives a notification that a node died, it removes the node from its finger table
+     * and then forwards information about that node to its successor so all nodes know if a node
+     * leaves the overlay.
+     * @param deadNode node that left the overlay.
+     * @throws IOException
+     */
     public synchronized void removeDeadNodeUpdateFTAndForward(DeadNode deadNode) throws IOException {
         NodeRecord attemptedRemoval = null;
         attemptedRemoval = parent.getKnownNodes().remove(deadNode.getDeadNodeID());

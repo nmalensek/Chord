@@ -16,7 +16,7 @@ public class ShutdownHook extends Thread {
     private int ownerNodeID;
     private Socket discoveryNodeSocket;
     private Thread mainThread;
-    private ArrayList<Thread> threadsToInterrupt = new ArrayList<>();
+//    private ArrayList<Thread> threadsToInterrupt = new ArrayList<>();
 
     public ShutdownHook(TCPSender sender, Peer owner, int ownerNodeID,
                         Socket discoveryNodeSocket, Thread mainThread) {
@@ -27,9 +27,9 @@ public class ShutdownHook extends Thread {
         this.mainThread = mainThread;
     }
 
-    public void addThreadToInterrupt(Thread thread) {
-        threadsToInterrupt.add(thread);
-    }
+//    public void addThreadToInterrupt(Thread thread) {
+//        threadsToInterrupt.add(thread);
+//    }
 
     @Override
     public void run() {
