@@ -54,6 +54,7 @@ public class StoreData implements Node {
             lookup.setRoutingPath(thisNodeHost + ":" + thisNodePort + ":" + 99999 + ",");
             String lookupHostPort = ((NodeInformation) event).getNodeInfo();
             Socket lookupSocket = new Socket(split.getHost(lookupHostPort), split.getPort(lookupHostPort));
+            System.out.println("Sending lookup to " + ((NodeInformation) event).getNodeInfo());
             sender.sendToSpecificSocket(lookupSocket, lookup.getBytes());
         } else if (event instanceof DestinationNode) {
             DestinationNode destination = (DestinationNode) event;

@@ -25,9 +25,6 @@ public class DiscoveryNode implements Node {
     private TCPSender sender = new TCPSender();
     private SplitHostPort split = new SplitHostPort();
 
-    public DiscoveryNode() {
-    }
-
     private void startup() {
         TCPServerThread serverThread = new TCPServerThread(this, discoveryPort);
         serverThread.start();
@@ -36,21 +33,25 @@ public class DiscoveryNode implements Node {
     }
 
     private synchronized void addNewNodeToOverlay(NodeRecord newNode) throws IOException {
-        checkForCollision(newNode);
-        registeredPeers.put(newNode.getIdentifier(), newNode);
-        randomNodes.add(newNode.getIdentifier());
+        boolean nodeExists = checkForCollision(newNode);
+        if (!nodeExists) {
+            registeredPeers.put(newNode.getIdentifier(), newNode);
+            randomNodes.add(newNode.getIdentifier());
+        }
     }
 
-    private synchronized void checkForCollision(NodeRecord node) throws IOException {
+    private synchronized boolean checkForCollision(NodeRecord node) throws IOException {
         if (registeredPeers.get(node.getIdentifier()) == null) {
             NodeRecord randomNode = randomNodes.size() == 0 ? node : chooseRandomNode();
 
             NodeInformation messageWithRandomNode = prepareRandomNodeInfoMessage(randomNode);
             sender.sendToSpecificSocket(node.getNodeSocket(), messageWithRandomNode.getBytes());
             System.out.println("sent node information to node " + messageWithRandomNode.getNodeInfo());
+            return false;
         } else {
             Collision collision = new Collision();
             sender.sendToSpecificSocket(node.getNodeSocket(), collision.getBytes());
+            return true;
         }
     }
 

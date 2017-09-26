@@ -223,14 +223,12 @@ public class MessageProcessor {
         parent.getKnownNodes().putIfAbsent(predecessorID, newPredecessor);
 
         fingerTableManagement.updateConcurrentFingerTable(ID, parent.getFingerTable(), parent.getKnownNodes());
-        parent.setFingerTableModified(true);
 
         if (parent.getKnownNodes().size() > 2) {
             NodeRecord successor = parent.getFingerTable().get(1); //tell new predecessor about your successor
             sendSuccessorInformation(successor, null, newPredecessor.getNodeSocket());
         }
 
-        int filesTransferred = 0;
         for (int fileKey : fileHashMap.keySet()) {
             if (predecessorID < ID && predecessorID >= fileKey || predecessorID > ID && predecessorID >= fileKey && fileKey > ID) {
                 FilePayload file = new FilePayload();
@@ -245,11 +243,6 @@ public class MessageProcessor {
 
                 File transferredFile = fileHashMap.remove(fileKey);
                 Files.delete(Paths.get(transferredFile.getPath()));
-
-                filesTransferred++;
-            }
-            if (filesTransferred > 0) {
-                parent.setFilesResponsibleForModified(true);
             }
         }
     }
@@ -295,7 +288,6 @@ public class MessageProcessor {
             sender.sendToSpecificSocket(successorNode.getNodeSocket(), askForSuccessor.getBytes());
         } else {
             fingerTableManagement.updateConcurrentFingerTable(ID, parent.getFingerTable(), parent.getKnownNodes());
-            parent.setFingerTableModified(true);
         }
     }
 
@@ -307,7 +299,6 @@ public class MessageProcessor {
             parent.getKnownNodes().put(originatorID, new NodeRecord(originatorHostPort, originatorID,
                     requestOriginator[0],new Socket(requestOriginator[0], split.getPort(originatorHostPort))));
             fingerTableManagement.updateConcurrentFingerTable(ID, parent.getFingerTable(), parent.getKnownNodes());
-            parent.setFingerTableModified(true);
         }
     }
 
