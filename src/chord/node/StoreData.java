@@ -107,11 +107,11 @@ public class StoreData implements Node {
     }
 
     public static void main(String[] args) {
-        discoveryNodeHost = args[0];
-        discoveryNodePort = Integer.parseInt(args[1]);
-        thisNodePort = Integer.parseInt(args[2]);
 
         try {
+            discoveryNodeHost = args[0];
+            discoveryNodePort = Integer.parseInt(args[1]);
+            thisNodePort = Integer.parseInt(args[2]);
             try {
                 StoreData storeData = new StoreData();
                 storeData.startup();

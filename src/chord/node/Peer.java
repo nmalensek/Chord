@@ -287,7 +287,7 @@ public class Peer implements Node {
     }
 
     public static void main(String[] args) throws UnknownHostException {
-
+        try {
         if (args[0].equals("na")) {
             try {
                 peerIdentifier = CreateIdentifier.createIdentifier(String.valueOf(System.currentTimeMillis()));
@@ -305,7 +305,7 @@ public class Peer implements Node {
         discoveryNodePort = Integer.parseInt(args[3]);
         storeDataHostPort = args[4];
 
-        try {
+
             try {
                 Peer peer = new Peer();
             } catch (IOException e) {

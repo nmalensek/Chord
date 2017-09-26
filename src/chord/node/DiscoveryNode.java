@@ -125,12 +125,13 @@ public class DiscoveryNode implements Node {
     }
 
     public static void main(String[] args) throws UnknownHostException {
-        discoveryHost = Inet4Address.getLocalHost().getHostName();
-        discoveryPort = Integer.parseInt(args[0]);
-        storeDataHost = args[1];
-        storeDataPort = Integer.parseInt(args[2]);
 
         try {
+            discoveryHost = Inet4Address.getLocalHost().getHostName();
+            discoveryPort = Integer.parseInt(args[0]);
+            storeDataHost = args[1];
+            storeDataPort = Integer.parseInt(args[2]);
+
             DiscoveryNode discoveryNode = new DiscoveryNode();
             discoveryNode.startup();
         } catch (ArrayIndexOutOfBoundsException e) {
