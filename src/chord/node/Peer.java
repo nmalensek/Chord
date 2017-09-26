@@ -117,7 +117,6 @@ public class Peer implements Node {
                 new QuerySuccessorThread(this, queryInterval, peerHost, peerPort, peerIdentifier);
         querySuccessorThread.start();
     }
-    //TODO fix ID re-entry
 
     @Override
     public void onEvent(Event event, Socket destinationSocket) throws IOException {
