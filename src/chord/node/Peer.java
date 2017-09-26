@@ -305,16 +305,15 @@ public class Peer implements Node {
         discoveryNodePort = Integer.parseInt(args[3]);
         storeDataHostPort = args[4];
 
-        if (args.length != 5) {
-            System.out.println("Usage: [ID or \"na\"] [successor query frequency (ms)] [DiscoveryNode host]" +
-                    "\n [DiscoveryNode port] [StoreData host:port]");
-        } else {
+        try {
             try {
                 Peer peer = new Peer();
             } catch (IOException e) {
                 e.printStackTrace();
             }
+        } catch (ArrayIndexOutOfBoundsException e) {
+            System.out.println("Usage: [ID or \"na\"] [successor query frequency (ms)] [DiscoveryNode host]" +
+                    "\n [DiscoveryNode port] [StoreData host:port]");
         }
-
     }
 }
