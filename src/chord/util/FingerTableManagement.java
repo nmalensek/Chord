@@ -1,6 +1,5 @@
 package chord.util;
 
-import chord.node.Node;
 import chord.node.NodeRecord;
 
 import java.util.HashMap;

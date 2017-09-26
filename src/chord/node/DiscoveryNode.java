@@ -115,8 +115,8 @@ public class DiscoveryNode implements Node {
                     System.out.println("No nodes in overlay.");
                 } else {
                     for (NodeRecord peer : registeredPeers.values()) {
-                        System.out.println("ID: " + peer.getIdentifier() + "\tHost: " + peer.getHost() +
-                                "\tPort: " + peer.getPort());
+                        System.out.println("\tHost: " + peer.getHost() +
+                                "\tPort: " + peer.getPort() + "ID: " + peer.getIdentifier());
                     }
                 }
                 break;

@@ -80,6 +80,7 @@ public class HandleNodeLeaving {
             deadNode.setDeadNodeID(leavingMessage.getSixteenBitID());
             sender.sendToSpecificSocket(parent.getFingerTable().get(1).getNodeSocket(), deadNode.getBytes());
         }
+        fingerTableManagement.updateConcurrentFingerTable(ID, parent.getFingerTable(), parent.getKnownNodes());
     }
 
     public synchronized void removeDeadNodeUpdateFTAndForward(DeadNode deadNode) throws IOException {
