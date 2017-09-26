@@ -89,11 +89,13 @@ public class MessageProcessor {
                 fingerTableManagement.nodeIsLargestConcurrent(parent.getKnownNodes(), predecessorID)) {
             forwardLookup(lookupEvent, successor); //send to successor if predecessor's the largest node in the overlay
         } else if (fingerTableManagement.nodeIsLargestConcurrent(parent.getKnownNodes(), ID) && payload > ID) {
-            sendDestinationMessage(lookupEvent, successor.toString(), self.toString());
+//            sendDestinationMessage(lookupEvent, successor.toString(), self.toString());
+            forwardLookup(lookupEvent, successor);
         } else if (fingerTableManagement.nodeIsLargestConcurrent(parent.getKnownNodes(), ID)
                 && fingerTableManagement.nodeIsSmallestConcurrent(parent.getKnownNodes(), successor.getIdentifier())
                 && successor.getIdentifier() >= payload) { //successor is destination if this node is largest and payload's < successor
-            sendDestinationMessage(lookupEvent, successor.toString(), self.toString());
+//            sendDestinationMessage(lookupEvent, successor.toString(), self.toString());
+            forwardLookup(lookupEvent, successor);
         }
         else {
             ConcurrentHashMap<Integer, NodeRecord> parentFingerTable = parent.getFingerTable();

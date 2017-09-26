@@ -163,7 +163,6 @@ public class Peer implements Node {
                         NodeRecord n = new NodeRecord(senderHost + ":" + senderPort, senderID, senderHost, s);
                         knownNodes.put(senderID, n);
                     } else {
-                        System.out.println("Sending to " + senderID);
                         sender.sendToSpecificSocket(knownNodes.get(senderID).getNodeSocket(),
                                 writeQueryResponse().getBytes()); //send predecessor info
                     }
@@ -258,8 +257,7 @@ public class Peer implements Node {
                     System.out.println(key + "\t" + currentRow.getHost() + ":" + currentRow.getPort()
                             + "\tID: " + currentRow.getIdentifier());
                 }
-                System.out.println("\nSuccessor and predecessor:");
-                System.out.println("Successor: " + fingerTable.get(1).getHost() + "(ID: " + fingerTable.get(1).getIdentifier() + ")");
+                System.out.println("\nSuccessor: " + fingerTable.get(1).getHost() + "(ID: " + fingerTable.get(1).getIdentifier() + ")");
                 System.out.println("Predecessor: " + predecessor.getHost() + "(ID: " + predecessor.getIdentifier() + ")");
                 System.out.println("\nFiles managed by this node:");
                 for (int key : filesResponsibleFor.keySet()) {
@@ -273,10 +271,10 @@ public class Peer implements Node {
                 break;
             case "s":
                 for (int node : knownNodes.keySet()) {
-                    System.out.print(knownNodes.get(node).toString() + " ");
-                    if (knownNodes.get(node).getIdentifier() != peerIdentifier) {
-                        System.out.println(knownNodes.get(node).getNodeSocket().isClosed());
-                    }
+                    System.out.println(knownNodes.get(node).toString());
+//                    if (knownNodes.get(node).getIdentifier() != peerIdentifier) {
+//                        System.out.println(knownNodes.get(node).getNodeSocket().isClosed());
+//                    }
                 }
                 break;
             case "id":
