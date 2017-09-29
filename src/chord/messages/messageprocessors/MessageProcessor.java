@@ -54,10 +54,10 @@ public class MessageProcessor {
             Socket randomNodeSocket = new Socket(split.getHost(information.getNodeInfo()),
                     split.getPort(information.getNodeInfo()));
             sender.sendToSpecificSocket(randomNodeSocket, findLocation.getBytes());
-            parent.getKnownNodes().put(newNodeID,
-                    new NodeRecord(split.getHostPort(information.getNodeInfo()),
-                            newNodeID,
-                            split.getHost(information.getNodeInfo()), randomNodeSocket));
+//            parent.getKnownNodes().put(newNodeID,
+//                    new NodeRecord(split.getHostPort(information.getNodeInfo()),
+//                            newNodeID,
+//                            split.getHost(information.getNodeInfo()), randomNodeSocket));
         }
     }
 
@@ -81,7 +81,7 @@ public class MessageProcessor {
                 && payload < ID && predecessorID > ID) {
             sendDestinationMessage(lookupEvent, self.toString(), predecessor.toString());
         } else if (fingerTableManagement.nodeIsSmallestConcurrent(parent.getKnownNodes(), ID)
-                && payload > predecessorID && fingerTableManagement.nodeIsLargestConcurrent(parent.getKnownNodes(), predecessorID)) {
+                && payload > predecessorID) {
             sendDestinationMessage(lookupEvent, self.toString(), predecessor.toString());
         } else if (successor.getIdentifier() >= payload && predecessorID < payload) { //Successor is largest, send to there
             forwardLookup(lookupEvent, successor);
@@ -92,7 +92,6 @@ public class MessageProcessor {
 //            sendDestinationMessage(lookupEvent, successor.toString(), self.toString());
             forwardLookup(lookupEvent, successor);
         } else if (fingerTableManagement.nodeIsLargestConcurrent(parent.getKnownNodes(), ID)
-                && fingerTableManagement.nodeIsSmallestConcurrent(parent.getKnownNodes(), successor.getIdentifier())
                 && successor.getIdentifier() >= payload) { //successor is destination if this node is largest and payload's < successor
 //            sendDestinationMessage(lookupEvent, successor.toString(), self.toString());
             forwardLookup(lookupEvent, successor);
@@ -130,8 +129,8 @@ public class MessageProcessor {
         String originatingHost = split.getHost(originatingNode);
         int originatingPort = split.getPort(originatingNode);
         int originatingID = split.getID(originatingNode);
-        Socket requestorSocket = checkIfKnown(originatingHost, originatingPort, originatingID);
-
+//        Socket requestorSocket = checkIfKnown(originatingHost, originatingPort, originatingID);
+        Socket requestorSocket = new Socket(originatingHost, originatingPort);
         sender.sendToSpecificSocket(requestorSocket, thisNodeIsSink.getBytes());
         String[] routingPath = lookup.getRoutingPath().split(",");
         StringBuilder routeBuilder = new StringBuilder();
@@ -144,20 +143,20 @@ public class MessageProcessor {
         System.out.println("Hops: " + (lookup.getNumHops() + 1));
     }
 
-    private synchronized Socket checkIfKnown(String originatingHost, int originatingPort, int originatingID) throws IOException {
-        Socket socket;
-        if (parent.getKnownNodes().get(originatingID) == null && originatingID != storeDataID) {
-            socket = new Socket(originatingHost, originatingPort);
-            NodeRecord node = new NodeRecord(originatingHost + ":" + originatingPort, originatingID, originatingHost, socket);
-            parent.getKnownNodes().put(originatingID, node);
-            fingerTableManagement.updateConcurrentFingerTable(ID, parent.getFingerTable(), parent.getKnownNodes());
-        } else if (originatingID == storeDataID) {
-            socket = storeDataSocket;
-        } else {
-            socket = parent.getKnownNodes().get(originatingID).getNodeSocket();
-        }
-        return socket;
-    }
+//    private synchronized Socket checkIfKnown(String originatingHost, int originatingPort, int originatingID) throws IOException {
+//        Socket socket;
+//        if (parent.getKnownNodes().get(originatingID) == null && originatingID != storeDataID) {
+//            socket = new Socket(originatingHost, originatingPort);
+//            NodeRecord node = new NodeRecord(originatingHost + ":" + originatingPort, originatingID, originatingHost, socket);
+//            parent.getKnownNodes().put(originatingID, node);
+//            fingerTableManagement.updateConcurrentFingerTable(ID, parent.getFingerTable(), parent.getKnownNodes());
+//        } else if (originatingID == storeDataID) {
+//            socket = storeDataSocket;
+//        } else {
+//            socket = parent.getKnownNodes().get(originatingID).getNodeSocket();
+//        }
+//        return socket;
+//    }
 
     private synchronized void forwardLookup(Lookup lookup, NodeRecord forwardTarget) throws IOException {
         try {
@@ -228,7 +227,7 @@ public class MessageProcessor {
 
         if (parent.getKnownNodes().size() > 2) {
             NodeRecord successor = parent.getFingerTable().get(1); //tell new predecessor about your successor
-            sendSuccessorInformation(successor, null, newPredecessor.getNodeSocket());
+//            sendSuccessorInformation(successor, null, newPredecessor.getNodeSocket());
         }
 
         for (int fileKey : fileHashMap.keySet()) {
@@ -249,49 +248,49 @@ public class MessageProcessor {
         }
     }
 
-    public synchronized void sendSuccessorInformation(NodeRecord successor, AskForSuccessor message,
-                                                      Socket destinationSocket) throws IOException {
-        SuccessorInformation successorInformation = new SuccessorInformation();
-        successorInformation.setSuccessorInfo(successor.toString());
+//    public synchronized void sendSuccessorInformation(NodeRecord successor, AskForSuccessor message,
+//                                                      Socket destinationSocket) throws IOException {
+//        SuccessorInformation successorInformation = new SuccessorInformation();
+//        successorInformation.setSuccessorInfo(successor.toString());
+//
+//        if (destinationSocket == null) {
+////            System.out.println("sending on ask for successor message");
+//            String senderHost = split.getHost(message.getOriginatorInformation());
+//            int senderPort = split.getPort(message.getOriginatorInformation());
+//            Socket senderSocket = new Socket(senderHost, senderPort);
+//            sender.sendToSpecificSocket(senderSocket, successorInformation.getBytes());
+//        } else {
+////            System.out.println("sending on original join");
+//            sender.sendToSpecificSocket(destinationSocket, successorInformation.getBytes());
+//        }
+//    }
 
-        if (destinationSocket == null) {
-//            System.out.println("sending on ask for successor message");
-            String senderHost = split.getHost(message.getOriginatorInformation());
-            int senderPort = split.getPort(message.getOriginatorInformation());
-            Socket senderSocket = new Socket(senderHost, senderPort);
-            sender.sendToSpecificSocket(senderSocket, successorInformation.getBytes());
-        } else {
-//            System.out.println("sending on original join");
-            sender.sendToSpecificSocket(destinationSocket, successorInformation.getBytes());
-        }
-    }
-
-    public synchronized void processSuccessorInformation(SuccessorInformation successorInformation) throws IOException {
-        String successorHostPort = split.getHostPort(successorInformation.getSuccessorInfo());
-        int successorID = split.getID(successorInformation.getSuccessorInfo());
-
-        if (!split.getHost(successorHostPort).equals(host) ||
-                split.getPort(successorHostPort) != port) { //stop if node's successor is this node
-            String successorNickname = split.getHost(successorInformation.getSuccessorInfo());
-
-            NodeRecord successorNode;
-            if (parent.getKnownNodes().get(successorID) == null) {
-                System.out.println("Adding information about another node in the overlay...");
-                Socket successorSocket = new Socket(split.getHost(successorHostPort),
-                        split.getPort(successorHostPort));
-                successorNode = new NodeRecord(successorHostPort, successorID, successorNickname, successorSocket);
-                parent.getKnownNodes().put(successorID, successorNode);
-            } else {
-                successorNode = parent.getKnownNodes().get(successorID);
-            }
-
-            AskForSuccessor askForSuccessor = new AskForSuccessor();
-            askForSuccessor.setOriginatorInformation(host + ":" + port + ":" + ID);
-            sender.sendToSpecificSocket(successorNode.getNodeSocket(), askForSuccessor.getBytes());
-        } else {
-            fingerTableManagement.updateConcurrentFingerTable(ID, parent.getFingerTable(), parent.getKnownNodes());
-        }
-    }
+//    public synchronized void processSuccessorInformation(SuccessorInformation successorInformation) throws IOException {
+//        String successorHostPort = split.getHostPort(successorInformation.getSuccessorInfo());
+//        int successorID = split.getID(successorInformation.getSuccessorInfo());
+//
+//        if (!split.getHost(successorHostPort).equals(host) ||
+//                split.getPort(successorHostPort) != port) { //stop if node's successor is this node
+//            String successorNickname = split.getHost(successorInformation.getSuccessorInfo());
+//
+//            NodeRecord successorNode;
+//            if (parent.getKnownNodes().get(successorID) == null) {
+//                System.out.println("Adding information about another node in the overlay...");
+//                Socket successorSocket = new Socket(split.getHost(successorHostPort),
+//                        split.getPort(successorHostPort));
+//                successorNode = new NodeRecord(successorHostPort, successorID, successorNickname, successorSocket);
+//                parent.getKnownNodes().put(successorID, successorNode);
+//            } else {
+//                successorNode = parent.getKnownNodes().get(successorID);
+//            }
+//
+//            AskForSuccessor askForSuccessor = new AskForSuccessor();
+//            askForSuccessor.setOriginatorInformation(host + ":" + port + ":" + ID);
+//            sender.sendToSpecificSocket(successorNode.getNodeSocket(), askForSuccessor.getBytes());
+//        } else {
+//            fingerTableManagement.updateConcurrentFingerTable(ID, parent.getFingerTable(), parent.getKnownNodes());
+//        }
+//    }
 
     public synchronized void checkIfUnknownNode(AskForSuccessor requestForSuccessor) throws IOException {
         String[] requestOriginator = requestForSuccessor.getOriginatorInformation().split(":");

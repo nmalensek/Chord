@@ -182,10 +182,10 @@ public class Peer implements Node {
                     handleNodeLeaving.processPredecessorLeaving((NodeLeaving) event);
                 }
             } else if (event instanceof SuccessorInformation) {
-                messageProcessor.processSuccessorInformation((SuccessorInformation) event);
+//                messageProcessor.processSuccessorInformation((SuccessorInformation) event);
             } else if (event instanceof AskForSuccessor) {
-                messageProcessor.sendSuccessorInformation(fingerTable.get(1), (AskForSuccessor) event, null);
-                messageProcessor.checkIfUnknownNode((AskForSuccessor) event);
+//                messageProcessor.sendSuccessorInformation(fingerTable.get(1), (AskForSuccessor) event, null);
+//                messageProcessor.checkIfUnknownNode((AskForSuccessor) event);
             } else if (event instanceof DeadNode) {
                 handleNodeLeaving.removeDeadNodeUpdateFTAndForward((DeadNode) event);
             }
@@ -297,6 +297,9 @@ public class Peer implements Node {
             }
         } else {
             peerIdentifier = Integer.parseInt(args[0]);
+            if (peerIdentifier > 65534) {
+                throw new ArrayIndexOutOfBoundsException();
+            }
         }
 
         peerHost = Inet4Address.getLocalHost().getHostName();
@@ -312,7 +315,7 @@ public class Peer implements Node {
                 e.printStackTrace();
             }
         } catch (ArrayIndexOutOfBoundsException e) {
-            System.out.println("Usage: [ID or \"na\"] [successor query frequency (ms)] [DiscoveryNode host]" +
+            System.out.println("Usage: [ID or \"na\", ID < 65535] [successor query frequency (ms)] [DiscoveryNode host]" +
                     "\n [DiscoveryNode port] [StoreData host:port]");
         }
     }
