@@ -1,3 +1,3 @@
 # Implementation of the Chord P2P network
 
-Currently has bugs in the routing algorithm and finger table maintenance.
+Known bugs: under certain conditions, a node can join the network and remain undetected by one of its neighbors. Finger table maintenance only partially implemented, original implementation shared too much information (all nodes knew about all other nodes).
